@@ -11,9 +11,10 @@ namespace Rare {
 #define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 	class Logger {
 
-		private:
+	private:
 		static std::shared_ptr<spdlog::logger> _coreLogger;
-		public:
+	public:
+		Logger(const Logger&) = delete;
 		static void init();
 		inline static std::shared_ptr<spdlog::logger>& getCoreLogger() { return _coreLogger; };
 	};

@@ -8,8 +8,7 @@ namespace Rare {
 	void RareCore::init() {
 
 		//begin logger initialization
-		Rare::Logger logger = Rare::Logger();
-		logger.init();
+		Rare::Logger::init();
 		RARE_LOG("Logger:\t Initialization complete");
 
 		//begin glfw initialization
@@ -56,19 +55,6 @@ namespace Rare {
 		if (vkCreateInstance(&createInfo, nullptr, &_vkInstance) != VK_SUCCESS)
 			RARE_FATAL("Failed to create vkInstance");
 
-
-		/*uint32_t deviceCount = 0;
-		vkEnumeratePhysicalDevices(_vkInstance, &deviceCount, nullptr);
-		if (deviceCount == 0) RARE_FATAL("No PhysicalDevicesFound");
-
-		std::vector<VkPhysicalDevice> devices(deviceCount);
-		vkEnumeratePhysicalDevices(_vkInstance, &deviceCount, devices.data());
-		for (const auto& currentDevice : devices) {
-			if (_isDeviceSuitable(currentDevice)) {
-				_physicalDevice = currentDevice;
-				break;
-			}
-		}*/
 		_pickPhysicalDevice();
 		if (_physicalDevice == VK_NULL_HANDLE) RARE_FATAL("Couldn't find a physical device");
 
@@ -87,7 +73,7 @@ namespace Rare {
 		static double start = glfwGetTime();
 		static double delta;
 		glfwPollEvents();//assign this to a daemon thread and lock event manager to synch assignments
-		_coreShouldClose = (delta = glfwGetTime() - start) >= 5 ? true : false;
+		_coreShouldClose = (delta = glfwGetTime() - start) >= 45 ? true : false;
 	}
 	void RareCore::render() {
 
