@@ -17,6 +17,7 @@ namespace Rare {
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 		_windowRef = glfwCreateWindow(640, 480, _windowRefName, NULL, NULL);
+		glfwSetWindowPos(_windowRef, 640 * 2, 480);
 		glfwMakeContextCurrent(_windowRef);
 		RARE_LOG("GLFW:\t\t Initialization complete");
 
@@ -127,7 +128,7 @@ namespace Rare {
 			VkPhysicalDeviceFeatures deviceFeatures;
 			vkGetPhysicalDeviceProperties(device, &deviceProperties);
 			vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
-
+			auto deviceName = deviceProperties.deviceName;
 			int score = 0;
 
 			// Discrete GPUs have a significant performance advantage
@@ -137,15 +138,19 @@ namespace Rare {
 
 			}
 
-			// Maximum possible size of textures affects graphics quality
 			score += deviceProperties.limits.maxImageDimension2D;
 
-			// Application can't function without geometry shaders
 			if (!deviceFeatures.geometryShader) {
-				return 0;
-
+				RARE_ERROR("Device '{}' doesn't support geometry shaders", deviceName);//bad but not fatal
+				score = 0;
 			}
-
+			if (!deviceFeatures.tessellationShader) {
+				RARE_ERROR("Device '{}' doesn't support tesselation shaders", deviceName);
+				score = 0;
+			}
+			if (!deviceFeatures.multiViewport) {
+				RARE_WARN("Device '{}' doesn't support multiple viewports ", deviceName);
+			}
 			return score;
 		};
 		for (const auto& device : devices) {
