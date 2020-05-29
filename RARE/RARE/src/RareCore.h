@@ -9,16 +9,24 @@
 #include <glm/glm.hpp>
 #include <tools/Logger.h>
 
+#include <map>
 
 namespace Rare {
 	class RareCore {
 
 	private:
+		bool _coreShouldClose;
+
 		//TODO: Abstract 'window' into its own class
 		GLFWwindow* _windowRef;
 		const char* _windowRefName;
 
-		bool _coreShouldClose;
+		VkInstance _vkInstance;
+		VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
+
+		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
+		void _createVkInstance();
+		void _pickPhysicalDevice();
 	public:
 		RareCore();
 		RareCore(const char* windowName);

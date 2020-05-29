@@ -36,7 +36,7 @@ namespace Rare {
 #define RARE_LOG(...) ::Rare::Logger::getCoreLogger()->info(__VA_ARGS__)
 #define RARE_WARN(...) ::Rare::Logger::getCoreLogger()->warn(__VA_ARGS__)
 #define RARE_ERROR(...) ::Rare::Logger::getCoreLogger()->error(__VA_ARGS__)
-#define RARE_FATAL(...) ::Rare::Logger::getCoreLogger()->critical(__VA_ARGS__); DebugBreak()
+#define RARE_FATAL(...) ::Rare::Logger::getCoreLogger()->critical(__VA_ARGS__);
 
 #else 
 #define RARE_TRACE(...)
