@@ -45,13 +45,17 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDir)outsourced\Vulkan\include\;$(SolutionDir)outsourced\glfw\include\;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)outsourced\glfw\lib-vc2017;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)RARE\outsourced\Vulkan\include\;$(SolutionDir)RARE\outsourced\glfw\include\;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)RARE\outsourced\glfw\lib-vc2017;$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)bin\$(Configuration)-$(SDKIDentifier)-x64\$(ProjectName)</OutDir>
+    <IntDir>$(SolutionDir)intermediate-bin\$(Configuration)-$(SDKIDentifier)-x64\$(ProjectName)</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(SolutionDir)outsourced\Vulkan\include\;$(SolutionDir)outsourced\glfw\include\;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)outsourced\glfw\lib-vc2017;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)RARE\outsourced\Vulkan\include\;$(SolutionDir)RARE\outsourced\glfw\include\;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)RARE\outsourced\glfw\lib-vc2017;$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)bin\$(Configuration)-$(SDKIDentifier)-x64\$(ProjectName)</OutDir>
+    <IntDir>$(SolutionDir)intermediate-bin\$(Configuration)-$(SDKIDentifier)-x64\$(ProjectName)</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -59,14 +63,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>RAVE_DEBUG_BUILD;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)outsourced\glm;$(SolutionDir)outsourced\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)RARE\outsourced\glm;$(SolutionDir)RARE\outsourced\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>vulkan-1.lib;glfw3.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)outsourced\Vulkan\Lib\;$(SolutionDir)outsourced\glfw\lib-vc2017\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)RARE\outsourced\Vulkan\Lib\;$(SolutionDir)RARE\outsourced\glfw\lib-vc2017\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -77,7 +81,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>RAVE_RELEASE_BUILD;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)outsourced\glm;$(SolutionDir)outsourced\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)RARE\outsourced\glm;$(SolutionDir)RARE\outsourced\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -86,7 +90,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>vulkan-1.lib;glfw3.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)outsourced\Vulkan\Lib\;$(SolutionDir)outsourced\glfw\lib-vc2017\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)RARE\outsourced\Vulkan\Lib\;$(SolutionDir)RARE\outsourced\glfw\lib-vc2017\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
