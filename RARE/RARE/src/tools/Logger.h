@@ -7,7 +7,7 @@
 
 
 
-namespace Rave {
+namespace Rare {
 #define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 	class Logger {
 
@@ -29,28 +29,28 @@ namespace Rave {
 }
 
 
-#ifdef RAVE_DEBUG_BUILD
+#ifdef RARE_DEBUG_BUILD
 
-#define RAVE_CORE_TRACE(...) ::Rave::Logger::getCoreLogger()->trace(__VA_ARGS__)
-#define RAVE_CORE_DEBUG(...) ::Rave::Logger::getCoreLogger()->debug(__VA_ARGS__)
-#define RAVE_CORE_LOG(...) ::Rave::Logger::getCoreLogger()->info(__VA_ARGS__)
-#define RAVE_CORE_WARN(...) ::Rave::Logger::getCoreLogger()->warn(__VA_ARGS__)
-#define RAVE_CORE_ERROR(...) ::Rave::Logger::getCoreLogger()->error(__VA_ARGS__)
-#define RAVE_CORE_FATAL(...) ::Rave::Logger::getCoreLogger()->critical(__VA_ARGS__); DebugBreak()
+#define RARE_TRACE(...) ::Rare::Logger::getCoreLogger()->trace(__VA_ARGS__)
+#define RARE_DEBUG(...) ::Rare::Logger::getCoreLogger()->debug(__VA_ARGS__)
+#define RARE_LOG(...) ::Rare::Logger::getCoreLogger()->info(__VA_ARGS__)
+#define RARE_WARN(...) ::Rare::Logger::getCoreLogger()->warn(__VA_ARGS__)
+#define RARE_ERROR(...) ::Rare::Logger::getCoreLogger()->error(__VA_ARGS__)
+#define RARE_FATAL(...) ::Rare::Logger::getCoreLogger()->critical(__VA_ARGS__); DebugBreak()
 
 #else 
-#define RAVE_CORE_TRACE(...)
-#define RAVE_CORE_DEBUG(...)
-#define RAVE_CORE_LOG(...) 
-#define RAVE_CORE_WARN(...)
-#define RAVE_CORE_ERROR(...) 
-#define RAVE_CORE_FATAL(...) 
+#define RARE_TRACE(...)
+#define RARE_DEBUG(...)
+#define RARE_LOG(...) 
+#define RARE_WARN(...)
+#define RARE_ERROR(...) 
+#define RARE_FATAL(...) 
 
 #endif
 
-#define RAVE_TRACE(...) ::Rave::Logger::getClientLogger()->trace(__VA_ARGS__)
-#define RAVE_DEBUG(...) ::Rave::Logger::getClientLogger()->debug(__VA_ARGS__)
-#define RAVE_LOG(...) ::Rave::Logger::getClientLogger()->info(__VA_ARGS__)
-#define RAVE_WARN(...) ::Rave::Logger::getClientLogger()->warn(__VA_ARGS__)
-#define RAVE_ERROR(...) ::Rave::Logger::getClientLogger()->error(__VA_ARGS__)
-#define RAVE_FATAL(...) ::Rave::Logger::getClientLogger()->critical(__VA_ARGS__)
+//#define RARE_TRACE(...) ::Rare::Logger::getClientLogger()->trace(__VA_ARGS__)
+//#define RARE_DEBUG(...) ::Rare::Logger::getClientLogger()->debug(__VA_ARGS__)
+//#define RARE_LOG(...) ::Rare::Logger::getClientLogger()->info(__VA_ARGS__)
+//#define RARE_WARN(...) ::Rare::Logger::getClientLogger()->warn(__VA_ARGS__)
+//#define RARE_ERROR(...) ::Rare::Logger::getClientLogger()->error(__VA_ARGS__)
+//#define RARE_FATAL(...) ::Rare::Logger::getClientLogger()->critical(__VA_ARGS__)

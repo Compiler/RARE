@@ -21,9 +21,15 @@
     <ClCompile Include="src\tools\Logger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\RareCore.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\tools\Logger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\RareCore.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

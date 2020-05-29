@@ -45,14 +45,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDir)RARE\outsourced\Vulkan\include\;$(SolutionDir)RARE\outsourced\glfw\include\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)RARE\outsourced\Vulkan\include\;$(SolutionDir)RARE\outsourced\glfw\include\;$(SolutionDir)RARE\src;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)RARE\outsourced\glfw\lib-vc2017;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\$(Configuration)-$(SDKIDentifier)-x64\$(ProjectName)</OutDir>
     <IntDir>$(SolutionDir)intermediate-bin\$(Configuration)-$(SDKIDentifier)-x64\$(ProjectName)</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(SolutionDir)RARE\outsourced\Vulkan\include\;$(SolutionDir)RARE\outsourced\glfw\include\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)RARE\outsourced\Vulkan\include\;$(SolutionDir)RARE\outsourced\glfw\include\;$(SolutionDir)RARE\src;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)RARE\outsourced\glfw\lib-vc2017;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\$(Configuration)-$(SDKIDentifier)-x64\$(ProjectName)</OutDir>
     <IntDir>$(SolutionDir)intermediate-bin\$(Configuration)-$(SDKIDentifier)-x64\$(ProjectName)</IntDir>
@@ -61,7 +61,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>RAVE_DEBUG_BUILD;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>RARE_DEBUG_BUILD;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)RARE\outsourced\glm;$(SolutionDir)RARE\outsourced\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -79,7 +79,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>RAVE_RELEASE_BUILD;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>RARE_RELEASE_BUILD;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)RARE\outsourced\glm;$(SolutionDir)RARE\outsourced\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -94,10 +94,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\RareCore.cpp" />
     <ClCompile Include="src\tools\Logger.cpp" />
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\RareCore.h" />
     <ClInclude Include="src\tools\Logger.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
