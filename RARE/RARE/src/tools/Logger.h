@@ -1,15 +1,10 @@
 #pragma once
 #define SPDLOG_TRACE_ON
 #include "spdlog/spdlog.h"
-#include <ostream>
-#include <sstream>
-#include <iostream>
-#include <strstream>
 #include <spdlog/sinks/sink.h>
 #include "spdlog/sinks/ostream_sink.h" 
 #include "spdlog/sinks/stdout_color_sinks.h"
 
-#include <mutex>
 
 
 namespace Rave {
