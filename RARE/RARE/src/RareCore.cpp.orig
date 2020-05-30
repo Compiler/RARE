@@ -73,6 +73,10 @@ namespace Rare {
 		static double start = glfwGetTime();
 		static double delta;
 		glfwPollEvents();//assign this to a daemon thread and lock event manager to synch assignments
+<<<<<<< HEAD
+
+=======
+>>>>>>> b9b62501edbac30ad117b3842aebdf987965b891
 		_coreShouldClose = (delta = glfwGetTime() - start) >= 45 ? true : false;
 
 	}
