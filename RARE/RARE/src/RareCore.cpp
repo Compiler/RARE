@@ -2,8 +2,10 @@
 
 namespace Rare {
 
-	RareCore::RareCore():_windowRefName("Default Name") { _coreShouldClose = false; }
-	RareCore::RareCore(const char* windowName) : _windowRefName(windowName) { _coreShouldClose = false; }
+	RareCore::RareCore():_windowRefName("Default Name"),  _validationLayers({"VK_LAYER_KHRONOS_validation"}){ _coreShouldClose = false; }
+	RareCore::RareCore(const char* windowName) : _windowRefName(windowName), _validationLayers({ "VK_LAYER_KHRONOS_validation" }) { _coreShouldClose = false; }
+	RareCore::RareCore(const char* windowName, const std::vector<const char*> validationLayers) 
+		: _windowRefName(windowName), _validationLayers(validationLayers){ _coreShouldClose = false; }
 
 	void RareCore::init() {
 
@@ -115,7 +117,7 @@ namespace Rare {
 	void RareCore::dispose() {
 
 		if (_enableValidationLayers) {
-			DestroyDebugUtilsMessengerEXT(_vkInstance, _debugMessenger, nullptr);
+			//DestroyDebugUtilsMessengerEXT(_vkInstance, _debugMessenger, nullptr);
 		}
 
 		vkDestroyInstance(_vkInstance, nullptr);
