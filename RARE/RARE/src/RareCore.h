@@ -12,9 +12,20 @@
 #include <map>
 
 namespace Rare {
+
 	class RareCore {
+#ifdef NDEBUG
+		const bool _enableValidationLayers = false;
+#else
+		const bool _enableValidationLayers = true;
+#endif
 
 	private:
+
+		const std::vector<const char*> _validationLayers = {
+			"VK_LAYER_KHRONOS_validation"
+		};
+
 		bool _coreShouldClose;
 
 		//TODO: Abstract 'window' into its own class
@@ -23,10 +34,22 @@ namespace Rare {
 
 		VkInstance _vkInstance;
 		VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
+		VkDebugUtilsMessengerEXT debugMessenger;
 
 		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
 		void _createVkInstance();
 		void _pickPhysicalDevice();
+		void _setupDebugMessenger();
+		bool _checkValidationLayerSupport();
+		static VKAPI_ATTR VkBool32 VKAPI_CALL _debugCallback(
+			VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+			VkDebugUtilsMessageTypeFlagsEXT messageType,
+			const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+			void* pUserData) {
+			RARE_FATAL(pCallbackData->pMessage);
+			return VK_FALSE;
+		}
+		std::vector<const char*> _getRequiredExtensions();
 	public:
 		RareCore();
 		RareCore(const char* windowName);
@@ -39,5 +62,8 @@ namespace Rare {
 
 
 	};
+	VkResult CreateDebugUtilsMessengerEXT(
+		VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
+		const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 
 }
