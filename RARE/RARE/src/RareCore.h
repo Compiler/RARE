@@ -46,7 +46,14 @@ namespace Rare {
 			VkDebugUtilsMessageTypeFlagsEXT messageType,
 			const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 			void* pUserData) {
-			RARE_FATAL(pCallbackData->pMessage);
+			if(messageSeverity > VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+				RARE_FATAL(pCallbackData->pMessage);
+			if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+				RARE_ERROR(pCallbackData->pMessage);
+			if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+				RARE_WARN(pCallbackData->pMessage);
+			if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
+				RARE_LOG(pCallbackData->pMessage);
 			return VK_FALSE;
 		}
 		std::vector<const char*> _getRequiredExtensions();
