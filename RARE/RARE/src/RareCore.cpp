@@ -9,7 +9,7 @@ namespace Rare {
 
 		//begin logger initialization
 		Rare::Logger::init();
-		_setupDebugMessenger();
+		
 		RARE_LOG("Logger:\t Initialization complete");
 
 		//begin glfw initialization
@@ -23,8 +23,8 @@ namespace Rare {
 
 		//begin vk initialization
 		_createVkInstance();
+		_setupDebugMessenger();
 		
-
 		RARE_LOG("Initialization complete");
 	}
 
@@ -66,6 +66,22 @@ namespace Rare {
 			createInfo.enabledLayerCount = 0;
 		}
 
+		//Validation Layer stuff
+		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
+		if (_enableValidationLayers) {
+			createInfo.enabledLayerCount = static_cast<uint32_t>(_validationLayers.size());
+			createInfo.ppEnabledLayerNames = _validationLayers.data();
+
+			_populateDebugMessengerCreateInfo(debugCreateInfo);
+			createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
+		}
+		else {
+			createInfo.enabledLayerCount = 0;
+
+			createInfo.pNext = nullptr;
+		}
+
+
 		//nullptr cuz no custom allocator rn
 		if (vkCreateInstance(&createInfo, nullptr, &_vkInstance) != VK_SUCCESS)
 			RARE_FATAL("Failed to create vkInstance");
@@ -96,6 +112,11 @@ namespace Rare {
 	}
 
 	void RareCore::dispose() {
+
+		if (_enableValidationLayers) {
+			DestroyDebugUtilsMessengerEXT(_vkInstance, _debugMessenger, nullptr);
+		}
+
 		vkDestroyInstance(_vkInstance, nullptr);
 
 		glfwDestroyWindow(_windowRef);
@@ -188,16 +209,27 @@ namespace Rare {
 		return extensions;
 	}
 
-	void RareCore::_setupDebugMessenger() {
-		if (!_enableValidationLayers) return;
-
-		VkDebugUtilsMessengerCreateInfoEXT createInfo{};
+	void RareCore::_populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+		createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 		createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 		createInfo.pfnUserCallback = _debugCallback;
 		createInfo.pUserData = nullptr;
 	}
+
+	void RareCore::_setupDebugMessenger() {
+		if (!_enableValidationLayers) return;
+
+		VkDebugUtilsMessengerCreateInfoEXT createInfo;
+		_populateDebugMessengerCreateInfo(createInfo);
+
+		if (CreateDebugUtilsMessengerEXT(_vkInstance, &createInfo, nullptr, &_debugMessenger) == VK_ERROR_EXTENSION_NOT_PRESENT) {
+			RARE_FATAL("failed to set up debug messenger");
+		}
+
+	}
+	
 	
 
 	bool RareCore::_checkValidationLayerSupport() {
@@ -225,14 +257,5 @@ namespace Rare {
 		return true;
 	}
 
-	VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
-		auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-		if (func != nullptr) {
-			return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-		}
-		else {
-			return VK_ERROR_EXTENSION_NOT_PRESENT;
-		}
-	}
 
 }
