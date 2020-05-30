@@ -73,11 +73,7 @@ namespace Rare {
 		static double start = glfwGetTime();
 		static double delta;
 		glfwPollEvents();//assign this to a daemon thread and lock event manager to synch assignments
-<<<<<<< HEAD
 		_coreShouldClose = (delta = glfwGetTime() - start) >= 35 ? true : false;
-=======
-		_coreShouldClose = (delta = glfwGetTime() - start) >= 25 ? true : false;
->>>>>>> 227cc4b2544f8051d99e01999998ba875818eafa
 	}
 	void RareCore::render() {
 
