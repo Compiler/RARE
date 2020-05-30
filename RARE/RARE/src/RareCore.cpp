@@ -10,7 +10,7 @@ namespace Rare {
 		//begin logger initialization
 		Rare::Logger::init();
 		
-		RARE_LOG("Logger:\t Initialization complete");
+		RARE_LOG("Logger:\t\t Initialization complete");
 
 		//begin glfw initialization
 		glfwInit();
@@ -19,17 +19,22 @@ namespace Rare {
 		_windowRef = glfwCreateWindow(640, 480, _windowRefName, NULL, NULL);
 		glfwSetWindowPos(_windowRef, 640 * 2, 480);
 		glfwMakeContextCurrent(_windowRef);
-		RARE_LOG("GLFW:\t\t Initialization complete");
+		RARE_LOG("GLFW:\t\t\t Initialization complete");
 
 		//begin vk initialization
 		_createVkInstance();
+		RARE_LOG("Vulkan:\t\t Initialization complete");
+
+		//begin vk validation layers initialization
 		_setupDebugMessenger();
-		
+		RARE_LOG("Validation Layers:\t Initialization complete");
+
 		RARE_LOG("Initialization complete");
 	}
 
 	void RareCore::_createVkInstance() {
 
+		//check for validaton layer compatability issues
 		if (_enableValidationLayers && !_checkValidationLayerSupport()) {
 			RARE_FATAL("Validation Layers Unsupported");
 		}
@@ -93,12 +98,7 @@ namespace Rare {
 		RARE_DEBUG("{} extension(s) supported", vkExtensionCount);
 		RARE_DEBUG("{} glfw extension(s) required", static_cast<uint32_t>(glfwExtensions.size()));
 
-		RARE_LOG("VulkanInit: Complete");
-
 	}
-
-
-
 
 	void RareCore::update() {
 		static double start = glfwGetTime();
@@ -107,6 +107,7 @@ namespace Rare {
 		_coreShouldClose = (delta = glfwGetTime() - start) >= 5 ? true : false;
 
 	}
+
 	void RareCore::render() {
 
 	}
@@ -124,8 +125,6 @@ namespace Rare {
 	
 		RARE_LOG("{} Window closed", _windowRefName);
 	}
-
-
 
 	bool RareCore::_isDeviceSuitable(VkPhysicalDevice device) {
 		
@@ -195,6 +194,7 @@ namespace Rare {
 		
 
 	}
+
 	std::vector<const char*> RareCore::_getRequiredExtensions() {
 		uint32_t glfwExtensionCount = 0;
 		const char** glfwExtensions;
@@ -224,14 +224,12 @@ namespace Rare {
 		VkDebugUtilsMessengerCreateInfoEXT createInfo;
 		_populateDebugMessengerCreateInfo(createInfo);
 
-		if (CreateDebugUtilsMessengerEXT(_vkInstance, &createInfo, nullptr, &_debugMessenger) == VK_ERROR_EXTENSION_NOT_PRESENT) {
+		if (CreateDebugUtilsMessengerEXT(_vkInstance, &createInfo, nullptr, &_debugMessenger) != VK_SUCCESS) {
 			RARE_FATAL("failed to set up debug messenger");
 		}
 
 	}
 	
-	
-
 	bool RareCore::_checkValidationLayerSupport() {
 		uint32_t layerCount;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -256,6 +254,7 @@ namespace Rare {
 
 		return true;
 	}
+
 	VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
 		const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
 
