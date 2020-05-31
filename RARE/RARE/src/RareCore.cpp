@@ -42,13 +42,19 @@ namespace Rare {
 		_setupDebugMessenger();
 		RARE_LOG("Validation Layers:\t Initialization complete\n");
 
+
+		//begin creating surface device
+		RARE_LOG("Create Surface:\t Begin init");
+		_pickPhysicalDevice();
+		RARE_LOG("Create Surface:\t Initialization complete\n");
+
 		//begin picking physical device
 		RARE_LOG("Pick Physical Device:\t Begin init");
 		_pickPhysicalDevice();
 		RARE_LOG("Pick Physical Device:\t Initialization complete\n");
 
 
-		//begin picking physical device
+		//begin creating logical device
 		RARE_LOG("Create Logical Device:\t Begin init");
 		_createLogicalDevice();
 		RARE_LOG("Create Logical Device:\t Initialization complete\n");
@@ -125,6 +131,12 @@ namespace Rare {
 
 	}
 
+	void RareCore::_createSurface() {
+		if (glfwCreateWindowSurface(_vkInstance, _windowRef, nullptr, &_surface) != VK_SUCCESS) {
+			RARE_FATAL("Couldn't create window surface");
+		}
+	}
+
 	void RareCore::_createLogicalDevice() {
 		QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);//find queue families for graphics only
 
@@ -172,7 +184,7 @@ namespace Rare {
 
 	void RareCore::dispose() {
 		vkDestroyDevice(_logicalDevice, nullptr);
-
+		vkDestroySurfaceKHR(_vkInstance, _surface, nullptr);
 		if (_enableValidationLayers) {
 			DestroyDebugUtilsMessengerEXT(_vkInstance, _debugMessenger, nullptr);
 		}
@@ -305,7 +317,7 @@ namespace Rare {
 		if (CreateDebugUtilsMessengerEXT(_vkInstance, &createInfo, nullptr, &_debugMessenger) != VK_SUCCESS) {
 			RARE_FATAL("failed to set up debug messenger");
 		}
-
+		RARE_DEBUG("Created debug messenger");
 	}
 	
 	bool RareCore::_checkValidationLayerSupport() {
@@ -317,7 +329,7 @@ namespace Rare {
 
 		for (const char* vLayerName : _validationLayers) {
 			bool layerFound = false;
-
+			RARE_DEBUG("Checking '{}' validation layer", vLayerName);
 			for (const auto& vLayerProperties : availableLayers) {
 				if (strcmp(vLayerName, vLayerProperties.layerName) == 0) {
 					layerFound = true;

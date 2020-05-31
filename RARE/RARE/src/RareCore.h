@@ -28,14 +28,18 @@ namespace Rare {
 		const char* _windowRefName;
 		const std::vector<const char*> _validationLayers;
 
+		//vk setup core
 		VkInstance _vkInstance;
 		VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
 		VkDevice _logicalDevice;
 		VkDebugUtilsMessengerEXT _debugMessenger;
 		VkQueue _graphicsQueue;
+		//wsi surface integration
+		VkSurfaceKHR _surface;
 
 		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
 		void _createVkInstance();
+		void _createSurface();
 		void _pickPhysicalDevice();
 		void _createLogicalDevice();
 		QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
