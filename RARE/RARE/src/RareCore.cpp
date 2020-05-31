@@ -39,6 +39,17 @@ namespace Rare {
 		_setupDebugMessenger();
 		RARE_LOG("Validation Layers:\t Initialization complete");
 
+		//begin picking physical device
+		_pickPhysicalDevice();
+		RARE_LOG("Pick Physical Device:\t Initialization complete");
+
+
+		//begin picking physical device
+		_createLogicalDevice();
+		RARE_LOG("Create Logical Device:\t Initialization complete");
+
+
+
 		RARE_LOG("Initialization complete");
 	}
 
@@ -101,12 +112,42 @@ namespace Rare {
 		if (vkCreateInstance(&createInfo, nullptr, &_vkInstance) != VK_SUCCESS)
 			RARE_FATAL("Failed to create vkInstance");
 
-		_pickPhysicalDevice();
-		if (_physicalDevice == VK_NULL_HANDLE) RARE_FATAL("Couldn't find a physical device");
+		
 
 		
 		RARE_DEBUG("{} extension(s) supported", vkExtensionCount);
 		RARE_DEBUG("{} glfw extension(s) required", static_cast<uint32_t>(glfwExtensions.size()));
+
+	}
+
+	void RareCore::_createLogicalDevice() {
+		QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);//find queue families for graphics only
+
+		VkDeviceQueueCreateInfo queueCreateInfo{};
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+		queueCreateInfo.queueCount = 1;
+
+		float queuePriority = 1.0f;
+		queueCreateInfo.pQueuePriorities = &queuePriority;
+
+		VkPhysicalDeviceFeatures deviceFeatures{};//specify which functionality we need -- come back later
+
+		VkDeviceCreateInfo createInfo{ };
+		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+
+		createInfo.pQueueCreateInfos = &queueCreateInfo;
+		createInfo.queueCreateInfoCount = 1;
+		createInfo.pEnabledFeatures = &deviceFeatures;
+		 createInfo.enabledExtensionCount = 0;
+		
+		 if (_enableValidationLayers) {
+			 createInfo.enabledLayerCount = static_cast<uint32_t>(_validationLayers.size());
+			 createInfo.ppEnabledLayerNames = _validationLayers.data();
+		 } else 
+			 createInfo.enabledLayerCount = 0;
+		 
+		 if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_logicalDevice) != VK_SUCCESS) RARE_FATAL("Couldn't create logical device");
 
 	}
 
@@ -123,9 +164,10 @@ namespace Rare {
 	}
 
 	void RareCore::dispose() {
+		vkDestroyDevice(_logicalDevice, nullptr);
 
 		if (_enableValidationLayers) {
-			//DestroyDebugUtilsMessengerEXT(_vkInstance, _debugMessenger, nullptr);
+			DestroyDebugUtilsMessengerEXT(_vkInstance, _debugMessenger, nullptr);
 		}
 
 		vkDestroyInstance(_vkInstance, nullptr);
@@ -138,10 +180,6 @@ namespace Rare {
 
 	bool RareCore::_isDeviceSuitable(VkPhysicalDevice device) {
 		QueueFamilyIndices indices = findQueueFamilies(device);
-
-		// Use an ordered map to automatically sort candidates by
-		//reasing score
-		
 		return indices.isComplete();
 	}
 
@@ -201,6 +239,9 @@ namespace Rare {
 			RARE_FATAL("failed to find a suitable GPU!");
 
 		}
+
+		if (_physicalDevice == VK_NULL_HANDLE) RARE_FATAL("Couldn't find a physical device");
+
 		
 
 	}
@@ -210,10 +251,11 @@ namespace Rare {
 
 		uint32_t queueFamilyCount = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+		RARE_DEBUG("Queue family count: {}", queueFamilyCount);
 		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 		int index = 0;
-		for (const auto& queueFamily : queueFamilies) {
+		for (const VkQueueFamilyProperties& queueFamily : queueFamilies) {
 			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 				indices.graphicsFamily = index;
 			if (indices.isComplete())
@@ -290,8 +332,7 @@ namespace Rare {
 		auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 		if (func != nullptr) {
 			return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-		}
-		else {
+		} else {
 			return VK_ERROR_EXTENSION_NOT_PRESENT;
 		}
 	}

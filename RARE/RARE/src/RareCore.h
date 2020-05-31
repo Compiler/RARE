@@ -11,12 +11,15 @@
 namespace Rare {
 
 	class RareCore {
-#ifdef NDEBUG
-		const bool _enableValidationLayers = false;
-#else
-		const bool _enableValidationLayers = true;
-#endif
+
 	private:
+
+	#ifdef NDEBUG
+		const bool _enableValidationLayers = false;
+	#else
+		const bool _enableValidationLayers = true;
+	#endif
+
 		struct QueueFamilyIndices;
 		bool _coreShouldClose;
 
@@ -27,11 +30,13 @@ namespace Rare {
 
 		VkInstance _vkInstance;
 		VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
+		VkDevice _logicalDevice;
 		VkDebugUtilsMessengerEXT _debugMessenger;
 
 		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
 		void _createVkInstance();
 		void _pickPhysicalDevice();
+		void _createLogicalDevice();
 		QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 		void _setupDebugMessenger();
 		bool _checkValidationLayerSupport();
@@ -60,11 +65,11 @@ namespace Rare {
 			void* pUserData) {
 			if (messageSeverity > VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 				RARE_FATAL("{}:{}\t{}", __FILENAME__, __LINE__, pCallbackData->pMessage);
-			if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 				RARE_ERROR("{}:{}\t{}", __FILENAME__, __LINE__, pCallbackData->pMessage);
-			if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
 				RARE_WARN("{}:{}\t{}", __FILENAME__, __LINE__, pCallbackData->pMessage);
-			if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
+			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
 				RARE_LOG("{}:{}\t{}", __FILENAME__, __LINE__, pCallbackData->pMessage);
 			return VK_FALSE;
 		}
