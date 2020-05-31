@@ -32,6 +32,7 @@ namespace Rare {
 		VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
 		VkDevice _logicalDevice;
 		VkDebugUtilsMessengerEXT _debugMessenger;
+		VkQueue _graphicsQueue;
 
 		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
 		void _createVkInstance();
@@ -57,6 +58,24 @@ namespace Rare {
 
 	//Static and Const
 	private:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 		static VKAPI_ATTR VkBool32 VKAPI_CALL _debugCallback(
 			VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

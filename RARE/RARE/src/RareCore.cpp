@@ -23,30 +23,35 @@ namespace Rare {
 		RARE_LOG("Logger:\t\t Initialization complete");
 
 		//begin glfw initialization
+		RARE_LOG("GLFW:\t\t\t Begin init");
 		glfwInit();
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 		_windowRef = glfwCreateWindow(640, 480, _windowRefName, NULL, NULL);
 		glfwSetWindowPos(_windowRef, 640 * 2, 480);
 		glfwMakeContextCurrent(_windowRef);
-		RARE_LOG("GLFW:\t\t\t Initialization complete");
+		RARE_LOG("GLFW:\t\t\t Initialization complete\n");
 
 		//begin vk initialization
+		RARE_LOG("Vulkan:\t\t Begin init");
 		_createVkInstance();
-		RARE_LOG("Vulkan:\t\t Initialization complete");
+		RARE_LOG("Vulkan:\t\t Initialization complete\n");
 
 		//begin vk validation layers initialization
+		RARE_LOG("Validation Layers:\t Begin init");
 		_setupDebugMessenger();
-		RARE_LOG("Validation Layers:\t Initialization complete");
+		RARE_LOG("Validation Layers:\t Initialization complete\n");
 
 		//begin picking physical device
+		RARE_LOG("Pick Physical Device:\t Begin init");
 		_pickPhysicalDevice();
-		RARE_LOG("Pick Physical Device:\t Initialization complete");
+		RARE_LOG("Pick Physical Device:\t Initialization complete\n");
 
 
 		//begin picking physical device
+		RARE_LOG("Create Logical Device:\t Begin init");
 		_createLogicalDevice();
-		RARE_LOG("Create Logical Device:\t Initialization complete");
+		RARE_LOG("Create Logical Device:\t Initialization complete\n");
 
 
 
@@ -148,6 +153,8 @@ namespace Rare {
 			 createInfo.enabledLayerCount = 0;
 		 
 		 if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_logicalDevice) != VK_SUCCESS) RARE_FATAL("Couldn't create logical device");
+
+		 vkGetDeviceQueue(_logicalDevice, indices.graphicsFamily.value(), 0, &_graphicsQueue);//index 0 cuz one queue family (graphics)
 
 	}
 
