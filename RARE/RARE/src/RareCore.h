@@ -5,6 +5,8 @@
 #include <glm/glm.hpp>
 #include <tools/Logger.h>
 #include <map>
+#include <optional>
+
 
 namespace Rare {
 
@@ -15,7 +17,7 @@ namespace Rare {
 		const bool _enableValidationLayers = true;
 #endif
 	private:
-
+		struct QueueFamilyIndices;
 		bool _coreShouldClose;
 
 		//TODO: Abstract 'window' into its own class
@@ -30,6 +32,7 @@ namespace Rare {
 		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
 		void _createVkInstance();
 		void _pickPhysicalDevice();
+		QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 		void _setupDebugMessenger();
 		bool _checkValidationLayerSupport();
 		std::vector<const char*> _getRequiredExtensions();
@@ -45,7 +48,7 @@ namespace Rare {
 		void dispose();
 
 		inline bool shouldClose() const { return _coreShouldClose; }
-
+		
 
 	//Static and Const
 	private:

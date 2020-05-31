@@ -1,6 +1,14 @@
 #include "RareCore.h"
 
 namespace Rare {
+	struct RareCore::QueueFamilyIndices {
+		std::optional<uint32_t> graphicsFamily;
+
+		bool isComplete() {
+			return graphicsFamily.has_value();
+		}
+	};
+
 
 	RareCore::RareCore():_windowRefName("Default Name"),  _validationLayers({"VK_LAYER_KHRONOS_validation"}){ _coreShouldClose = false; }
 	RareCore::RareCore(const char* windowName) : _windowRefName(windowName), _validationLayers({ "VK_LAYER_KHRONOS_validation" }) { _coreShouldClose = false; }
@@ -129,12 +137,12 @@ namespace Rare {
 	}
 
 	bool RareCore::_isDeviceSuitable(VkPhysicalDevice device) {
-		
+		QueueFamilyIndices indices = findQueueFamilies(device);
 
 		// Use an ordered map to automatically sort candidates by
 		//reasing score
 		
-		return true;
+		return indices.isComplete();
 	}
 
 	void RareCore::_pickPhysicalDevice() {
@@ -195,6 +203,25 @@ namespace Rare {
 		}
 		
 
+	}
+
+	RareCore::QueueFamilyIndices RareCore::findQueueFamilies(VkPhysicalDevice device) {
+		QueueFamilyIndices indices;
+
+		uint32_t queueFamilyCount = 0;
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+		int index = 0;
+		for (const auto& queueFamily : queueFamilies) {
+			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+				indices.graphicsFamily = index;
+			if (indices.isComplete())
+				break;
+			index++;
+		}
+
+		return indices;
 	}
 
 	std::vector<const char*> RareCore::_getRequiredExtensions() {
@@ -277,6 +304,6 @@ namespace Rare {
 			func(instance, debugMessenger, pAllocator);
 		}
 	}
-
+	
 
 }
