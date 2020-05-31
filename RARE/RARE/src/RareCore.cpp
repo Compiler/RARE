@@ -3,9 +3,10 @@
 namespace Rare {
 	struct RareCore::QueueFamilyIndices {
 		std::optional<uint32_t> graphicsFamily;
+		std::optional<uint32_t> presentationFamily;
 
 		bool isComplete() {
-			return graphicsFamily.has_value();
+			return graphicsFamily.has_value() && presentationFamily.has_value();
 		}
 	};
 
@@ -45,7 +46,7 @@ namespace Rare {
 
 		//begin creating surface device
 		RARE_LOG("Create Surface:\t Begin init");
-		_pickPhysicalDevice();
+		_createSurface();
 		RARE_LOG("Create Surface:\t Initialization complete\n");
 
 		//begin picking physical device
@@ -141,32 +142,39 @@ namespace Rare {
 		QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);//find queue families for graphics only
 
 		VkDeviceQueueCreateInfo queueCreateInfo{};
-		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
-		queueCreateInfo.queueCount = 1;
-
+		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+		std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentationFamily.value() };
 		float queuePriority = 1.0f;
-		queueCreateInfo.pQueuePriorities = &queuePriority;
+		for (uint32_t queueFamily : uniqueQueueFamilies) {
+			VkDeviceQueueCreateInfo queueCreateInfo{};
+			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			queueCreateInfo.queueFamilyIndex = queueFamily;
+			queueCreateInfo.queueCount = 1;
+			queueCreateInfo.pQueuePriorities = &queuePriority;
+			queueCreateInfos.push_back(queueCreateInfo);
+
+		}
 
 		VkPhysicalDeviceFeatures deviceFeatures{};//specify which functionality we need -- come back later
 
 		VkDeviceCreateInfo createInfo{ };
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
-		createInfo.pQueueCreateInfos = &queueCreateInfo;
-		createInfo.queueCreateInfoCount = 1;
+		createInfo.pQueueCreateInfos = queueCreateInfos.data();
+		createInfo.queueCreateInfoCount = (uint_fast32_t)queueCreateInfos.size();
 		createInfo.pEnabledFeatures = &deviceFeatures;
-		 createInfo.enabledExtensionCount = 0;
-		
-		 if (_enableValidationLayers) {
-			 createInfo.enabledLayerCount = static_cast<uint32_t>(_validationLayers.size());
-			 createInfo.ppEnabledLayerNames = _validationLayers.data();
-		 } else 
-			 createInfo.enabledLayerCount = 0;
-		 
-		 if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_logicalDevice) != VK_SUCCESS) RARE_FATAL("Couldn't create logical device");
+		createInfo.enabledExtensionCount = 0;
 
-		 vkGetDeviceQueue(_logicalDevice, indices.graphicsFamily.value(), 0, &_graphicsQueue);//index 0 cuz one queue family (graphics)
+		if (_enableValidationLayers) {
+			createInfo.enabledLayerCount = static_cast<uint32_t>(_validationLayers.size());
+			createInfo.ppEnabledLayerNames = _validationLayers.data();
+		} else
+			createInfo.enabledLayerCount = 0;
+
+		if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_logicalDevice) != VK_SUCCESS) RARE_FATAL("Couldn't create logical device");
+
+		vkGetDeviceQueue(_logicalDevice, indices.presentationFamily.value(), 0, &_presentationQueue);//index 0 cuz one queue family (graphics)
+		vkGetDeviceQueue(_logicalDevice, indices.graphicsFamily.value(), 0, &_graphicsQueue);
 
 	}
 
@@ -277,6 +285,9 @@ namespace Rare {
 		for (const VkQueueFamilyProperties& queueFamily : queueFamilies) {
 			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 				indices.graphicsFamily = index;
+			VkBool32 presentSupport = false;
+			vkGetPhysicalDeviceSurfaceSupportKHR(device, index, _surface, &presentSupport);
+			if (presentSupport) indices.presentationFamily = index;
 			if (indices.isComplete())
 				break;
 			index++;

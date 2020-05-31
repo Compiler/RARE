@@ -6,6 +6,7 @@
 #include <tools/Logger.h>
 #include <map>
 #include <optional>
+#include <set>
 
 
 namespace Rare {
@@ -34,6 +35,7 @@ namespace Rare {
 		VkDevice _logicalDevice;
 		VkDebugUtilsMessengerEXT _debugMessenger;
 		VkQueue _graphicsQueue;
+		VkQueue _presentationQueue;
 		//wsi surface integration
 		VkSurfaceKHR _surface;
 
