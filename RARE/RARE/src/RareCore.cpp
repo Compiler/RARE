@@ -402,18 +402,16 @@ namespace Rare {
 
 		return extensions;
 	}
-
 	SwapChainSupportDetails RareCore::_querySwapChainSupport(VkPhysicalDevice device) {
 		SwapChainSupportDetails details;
-
 		/*Start of querying surface capabalities / properties*/
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, _surface, &details.capabilities);
 		auto curDims = details.capabilities.currentExtent;
 		RARE_DEBUG("\tSurface current dimensions supported: ({}, {})", curDims.width, curDims.height);
 		RARE_DEBUG("\tSurface swapchain will support at least {} images in chain and at most {}", details.capabilities.minImageCount, details.capabilities.maxImageCount);
-		 /*End of querying surface capabalities / properties*/
+		/*End of querying surface capabalities / properties*/
 
-		 /*Start of querying supported surface formats*/
+		/*Start of querying supported surface formats*/
 		uint32_t formatCount;
 		vkGetPhysicalDeviceSurfaceFormatsKHR(device, _surface, &formatCount, nullptr);
 
@@ -421,22 +419,23 @@ namespace Rare {
 			details.formats.resize(formatCount);
 			vkGetPhysicalDeviceSurfaceFormatsKHR(device, _surface, &formatCount, details.formats.data());
 		}
-		 /*End of querying supported surface formats*/
+		/*End of querying supported surface formats*/
 
 
-		 /*Start of querying supported presentation modes*/
-		 uint32_t presentModeCount;
-		 vkGetPhysicalDeviceSurfacePresentModesKHR(device, _surface, &presentModeCount, nullptr);
+		/*Start of querying supported presentation modes*/
+		uint32_t presentModeCount;
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, _surface, &presentModeCount, nullptr);
 
-		 if (presentModeCount != 0) {
-			 details.presentModes.resize(presentModeCount);
-			 vkGetPhysicalDeviceSurfacePresentModesKHR(device, _surface, &presentModeCount, details.presentModes.data());
-		 }
-		 /*End of querying supported presentation modes*/
+		if (presentModeCount != 0) {
+			details.presentModes.resize(presentModeCount);
+			vkGetPhysicalDeviceSurfacePresentModesKHR(device, _surface, &presentModeCount, details.presentModes.data());
+		}
+		/*End of querying supported presentation modes*/
 
 		return details;
 	}
 
+	//choose from queuried(and provided) available formats
 	VkSurfaceFormatKHR RareCore::_chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
 		for (const auto& availableFormat : availableFormats) {
 			if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
@@ -445,28 +444,33 @@ namespace Rare {
 		}
 		return availableFormats[0];
 	}
-
 	VkPresentModeKHR RareCore::_chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
 		for (const auto& availablePresentMode : availablePresentModes) {
 			if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+				RARE_DEBUG("Using mailbox mode as presentation mode");
 				return availablePresentMode;
 			}
 		}
+		RARE_DEBUG("Using FIFO mode as presentation mode");
 		return VK_PRESENT_MODE_FIFO_KHR;
+
 	}
 
 	VkExtent2D RareCore::_chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+		VkExtent2D returnedExtent;
 		if (capabilities.currentExtent.width != UINT32_MAX) {
-			return capabilities.currentExtent;
-		}
-		else {
-			VkExtent2D actualExtent = {_WIDTH, _HEIGHT};
+			returnedExtent = capabilities.currentExtent;
+
+		} else {
+			VkExtent2D actualExtent = { _WIDTH, _HEIGHT };
 
 			actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
 			actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
+			returnedExtent = actualExtent;
 
-			return actualExtent;
 		}
+		RARE_DEBUG("Swap extent chosen: ({}, {})", returnedExtent.width, returnedExtent.height);
+		return returnedExtent;
 	}
 
 
