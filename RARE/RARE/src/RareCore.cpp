@@ -29,8 +29,8 @@ namespace Rare {
 		glfwInit();
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-		_windowRef = glfwCreateWindow(640, 480, _windowRefName, NULL, NULL);
-		glfwSetWindowPos(_windowRef, 640 * 2, 480);
+		_windowRef = glfwCreateWindow(_WIDTH, _HEIGHT, _windowRefName, NULL, NULL);
+		glfwSetWindowPos(_windowRef, _WIDTH * 2, _HEIGHT);
 		glfwMakeContextCurrent(_windowRef);
 		RARE_LOG("GLFW:\t\t\t Initialization complete\n");
 
@@ -60,6 +60,11 @@ namespace Rare {
 		RARE_LOG("Create Logical Device:\t Begin init");
 		_createLogicalDevice();
 		RARE_LOG("Create Logical Device:\t Initialization complete\n");
+
+		//begin creating swap chain
+		RARE_LOG("Create Swap Chain:\t Begin init");
+		_createSwapChain();
+		RARE_LOG("Create Swap Chain:\t Initialization complete\n");
 
 
 
@@ -139,7 +144,7 @@ namespace Rare {
 	}
 
 	void RareCore::_createLogicalDevice() {
-		QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);//find queue families for graphics and presentation
+		QueueFamilyIndices indices = _findQueueFamilies(_physicalDevice);//find queue families for graphics and presentation
 		if (!indices.isComplete()) RARE_WARN("Returned queues do not sufficiently cover the command requirements");
 
 		VkDeviceQueueCreateInfo queueCreateInfo{};
@@ -179,6 +184,65 @@ namespace Rare {
 
 	}
 
+	void RareCore::_createSwapChain() {
+		SwapChainSupportDetails swapChainSupport = _querySwapChainSupport(_physicalDevice);
+
+		VkSurfaceFormatKHR surfaceFormat = _chooseSwapSurfaceFormat(swapChainSupport.formats);
+		VkPresentModeKHR presentMode = _chooseSwapPresentMode(swapChainSupport.presentModes);
+		VkExtent2D extent = _chooseSwapExtent(swapChainSupport.capabilities);
+
+		uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+		if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
+			imageCount = swapChainSupport.capabilities.maxImageCount;
+		}
+
+		//create swapchain info
+		VkSwapchainCreateInfoKHR createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+		createInfo.surface = _surface;
+		createInfo.minImageCount = imageCount;
+		createInfo.imageFormat = surfaceFormat.format;
+		createInfo.imageColorSpace = surfaceFormat.colorSpace;
+		createInfo.imageExtent = extent;//resolution of the swap chain images
+		createInfo.imageArrayLayers = 1;
+		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;//the use of the images in this swapchain is to be directly rendered to
+
+		QueueFamilyIndices indices = _findQueueFamilies(_physicalDevice);
+		uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentationFamily.value() };
+
+		if (indices.graphicsFamily != indices.presentationFamily) {
+			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+			createInfo.queueFamilyIndexCount = 2;
+			createInfo.pQueueFamilyIndices = queueFamilyIndices;
+		}
+		else {
+			createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;//performant option. images are owned by one queue family at a time
+			createInfo.queueFamilyIndexCount = 0;
+			createInfo.pQueueFamilyIndices = nullptr;
+		}
+
+		createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
+		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;//does the image drawn to the window allow other windows to show through below it
+		createInfo.presentMode = presentMode;
+		createInfo.clipped = VK_TRUE;//enables clipping of pixels that are behind another window
+		createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+		//create swapchain
+		if (vkCreateSwapchainKHR(_logicalDevice, &createInfo, nullptr, &_swapChain) != VK_SUCCESS) {
+			RARE_FATAL("Failed to create Swap Chain!");
+		}
+
+		//store swap chain image handles in _swapChainImages
+		vkGetSwapchainImagesKHR(_logicalDevice, _swapChain, &imageCount, nullptr);
+		_swapChainImages.resize(imageCount);
+		vkGetSwapchainImagesKHR(_logicalDevice, _swapChain, &imageCount, _swapChainImages.data());
+
+		//store information about swap chain images for later use
+		_swapChainImageFormat = surfaceFormat.format;
+		_swapChainExtent = extent;
+
+	}
+
 	void RareCore::update() {
 		static double start = glfwGetTime();
 		static double delta;
@@ -192,6 +256,7 @@ namespace Rare {
 	}
 
 	void RareCore::dispose() {
+		vkDestroySwapchainKHR(_logicalDevice, _swapChain, nullptr);
 		vkDestroyDevice(_logicalDevice, nullptr);
 		vkDestroySurfaceKHR(_vkInstance, _surface, nullptr);
 		if (_enableValidationLayers) {
@@ -208,7 +273,7 @@ namespace Rare {
 
 	bool RareCore::_isDeviceSuitable(VkPhysicalDevice device) {
 
-		QueueFamilyIndices indices = findQueueFamilies(device);
+		QueueFamilyIndices indices = _findQueueFamilies(device);
 
 		uint32_t extensionCount;
 		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
@@ -301,7 +366,7 @@ namespace Rare {
 
 	}
 
-	RareCore::QueueFamilyIndices RareCore::findQueueFamilies(VkPhysicalDevice device) {
+	RareCore::QueueFamilyIndices RareCore::_findQueueFamilies(VkPhysicalDevice device) {
 		QueueFamilyIndices indices;
 
 		uint32_t queueFamilyCount = 0;
@@ -362,6 +427,38 @@ namespace Rare {
 		 }
 
 		return details;
+	}
+
+	VkSurfaceFormatKHR RareCore::_chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+		for (const auto& availableFormat : availableFormats) {
+			if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+				return availableFormat;
+			}
+		}
+		return availableFormats[0];
+	}
+
+	VkPresentModeKHR RareCore::_chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
+		for (const auto& availablePresentMode : availablePresentModes) {
+			if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+				return availablePresentMode;
+			}
+		}
+		return VK_PRESENT_MODE_FIFO_KHR;
+	}
+
+	VkExtent2D RareCore::_chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+		if (capabilities.currentExtent.width != UINT32_MAX) {
+			return capabilities.currentExtent;
+		}
+		else {
+			VkExtent2D actualExtent = {_WIDTH, _HEIGHT};
+
+			actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
+			actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
+
+			return actualExtent;
+		}
 	}
 
 

@@ -7,6 +7,8 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <cstdint>
+#include <algorithm>
 
 
 namespace Rare {
@@ -35,6 +37,7 @@ namespace Rare {
 		GLFWwindow* _windowRef;
 		const char* _windowRefName;
 		const std::vector<const char*> _validationLayers;
+		const int _WIDTH = 640, _HEIGHT = 480;
 
 		//vk setup core
 		VkInstance _vkInstance;
@@ -42,23 +45,33 @@ namespace Rare {
 		VkDevice _logicalDevice;
 		VkDebugUtilsMessengerEXT _debugMessenger;
 		VkQueue _graphicsQueue;
-		VkQueue _presentationQueue;
+		VkQueue _presentationQueue;		
 		std::vector<const char*> requiredDeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME }; //these are the absolute bare minimum required extensions to be considered suitable
 
 		//wsi surface integration
 		VkSurfaceKHR _surface;
+
+		VkSwapchainKHR _swapChain;
+		std::vector<VkImage> _swapChainImages;
+		VkFormat _swapChainImageFormat;
+		VkExtent2D _swapChainExtent;
+
 
 		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
 		void _createVkInstance();
 		void _createSurface();
 		void _pickPhysicalDevice();
 		void _createLogicalDevice();
-		QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+		void _createSwapChain();
+		QueueFamilyIndices _findQueueFamilies(VkPhysicalDevice device);
 		void _setupDebugMessenger();
 		bool _checkValidationLayerSupport();
 		std::vector<const char*> _getRequiredExtensions();
 		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 		SwapChainSupportDetails _querySwapChainSupport(VkPhysicalDevice device);
+		VkSurfaceFormatKHR _chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+		VkPresentModeKHR _chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+		VkExtent2D _chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 		
 	public:
 		RareCore();
