@@ -406,9 +406,14 @@ namespace Rare {
 	SwapChainSupportDetails RareCore::_querySwapChainSupport(VkPhysicalDevice device) {
 		SwapChainSupportDetails details;
 
+		/*Start of querying surface capabalities / properties*/
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, _surface, &details.capabilities);
+		auto curDims = details.capabilities.currentExtent;
+		RARE_DEBUG("\tSurface current dimensions supported: ({}, {})", curDims.width, curDims.height);
+		RARE_DEBUG("\tSurface swapchain will support at least {} images in chain and at most {}", details.capabilities.minImageCount, details.capabilities.maxImageCount);
+		 /*End of querying surface capabalities / properties*/
 
-
+		 /*Start of querying supported surface formats*/
 		uint32_t formatCount;
 		vkGetPhysicalDeviceSurfaceFormatsKHR(device, _surface, &formatCount, nullptr);
 
@@ -416,8 +421,10 @@ namespace Rare {
 			details.formats.resize(formatCount);
 			vkGetPhysicalDeviceSurfaceFormatsKHR(device, _surface, &formatCount, details.formats.data());
 		}
+		 /*End of querying supported surface formats*/
 
 
+		 /*Start of querying supported presentation modes*/
 		 uint32_t presentModeCount;
 		 vkGetPhysicalDeviceSurfacePresentModesKHR(device, _surface, &presentModeCount, nullptr);
 
@@ -425,6 +432,7 @@ namespace Rare {
 			 details.presentModes.resize(presentModeCount);
 			 vkGetPhysicalDeviceSurfacePresentModesKHR(device, _surface, &presentModeCount, details.presentModes.data());
 		 }
+		 /*End of querying supported presentation modes*/
 
 		return details;
 	}
