@@ -10,10 +10,17 @@
 
 
 namespace Rare {
-
+	struct SwapChainSupportDetails {
+		VkSurfaceCapabilitiesKHR capabilities;
+		std::vector<VkSurfaceFormatKHR> formats;
+		std::vector<VkPresentModeKHR> presentModes;
+	};
 	class RareCore {
 
 	private:
+
+		
+
 
 	#ifdef NDEBUG
 		const bool _enableValidationLayers = false;
@@ -36,6 +43,8 @@ namespace Rare {
 		VkDebugUtilsMessengerEXT _debugMessenger;
 		VkQueue _graphicsQueue;
 		VkQueue _presentationQueue;
+		std::vector<const char*> requiredDeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME }; //these are the absolute bare minimum required extensions to be considered suitable
+
 		//wsi surface integration
 		VkSurfaceKHR _surface;
 
@@ -49,6 +58,7 @@ namespace Rare {
 		bool _checkValidationLayerSupport();
 		std::vector<const char*> _getRequiredExtensions();
 		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+		SwapChainSupportDetails _querySwapChainSupport(VkPhysicalDevice device);
 		
 	public:
 		RareCore();

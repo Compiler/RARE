@@ -164,8 +164,8 @@ namespace Rare {
 		createInfo.pQueueCreateInfos = queueCreateInfos.data();
 		createInfo.queueCreateInfoCount = (uint_fast32_t)queueCreateInfos.size();
 		createInfo.pEnabledFeatures = &deviceFeatures;
-		createInfo.enabledExtensionCount = 0;
-
+		createInfo.enabledExtensionCount = (uint32_t)requiredDeviceExtensions.size();
+		createInfo.ppEnabledExtensionNames = requiredDeviceExtensions.data();
 		if (_enableValidationLayers) {
 			createInfo.enabledLayerCount = static_cast<uint32_t>(_validationLayers.size());
 			createInfo.ppEnabledLayerNames = _validationLayers.data();
@@ -207,7 +207,6 @@ namespace Rare {
 	}
 
 	bool RareCore::_isDeviceSuitable(VkPhysicalDevice device) {
-		static const std::vector<const char*> requiredDeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME }; //these are the absolute bare minimum required extensions to be considered suitable
 
 		QueueFamilyIndices indices = findQueueFamilies(device);
 
@@ -220,7 +219,15 @@ namespace Rare {
 
 		for (const auto& extension : availableExtensions) requiredExtensions.erase(extension.extensionName);
 
-		return indices.isComplete() && requiredExtensions.empty();
+		bool swapChainAdequate = false;
+		if (requiredExtensions.empty()) {
+
+			SwapChainSupportDetails swapChainSupport = _querySwapChainSupport(device);
+			swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+
+		}
+
+		return indices.isComplete() && requiredExtensions.empty() && swapChainAdequate;
 	}
 
 	void RareCore::_pickPhysicalDevice() {
@@ -330,6 +337,33 @@ namespace Rare {
 
 		return extensions;
 	}
+
+	SwapChainSupportDetails RareCore::_querySwapChainSupport(VkPhysicalDevice device) {
+		SwapChainSupportDetails details;
+
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, _surface, &details.capabilities);
+
+
+		uint32_t formatCount;
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, _surface, &formatCount, nullptr);
+
+		if (formatCount != 0) {
+			details.formats.resize(formatCount);
+			vkGetPhysicalDeviceSurfaceFormatsKHR(device, _surface, &formatCount, details.formats.data());
+		}
+
+
+		 uint32_t presentModeCount;
+		 vkGetPhysicalDeviceSurfacePresentModesKHR(device, _surface, &presentModeCount, nullptr);
+
+		 if (presentModeCount != 0) {
+			 details.presentModes.resize(presentModeCount);
+			 vkGetPhysicalDeviceSurfacePresentModesKHR(device, _surface, &presentModeCount, details.presentModes.data());
+		 }
+
+		return details;
+	}
+
 
 	void RareCore::_populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
 		createInfo = {};
