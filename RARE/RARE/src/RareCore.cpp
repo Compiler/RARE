@@ -5,6 +5,7 @@ namespace Rare {
 		std::optional<uint32_t> graphicsFamily;
 		std::optional<uint32_t> presentationFamily;
 
+		//method to show whether or not a set of needed commands have be acquired 
 		bool isComplete() {
 			return graphicsFamily.has_value() && presentationFamily.has_value();
 		}
@@ -89,7 +90,6 @@ namespace Rare {
 		vkEnumerateInstanceExtensionProperties(nullptr, &vkExtensionCount, extensions.data());
 
 
-
 		VkInstanceCreateInfo createInfo{};//tells vulkan driver which global extensions and validation layers to use
 		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		createInfo.pApplicationInfo = &appInfo;
@@ -139,7 +139,8 @@ namespace Rare {
 	}
 
 	void RareCore::_createLogicalDevice() {
-		QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);//find queue families for graphics only
+		QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);//find queue families for graphics and presentation
+		if (!indices.isComplete()) RARE_WARN("Returned queues do not sufficiently cover the command requirements");
 
 		VkDeviceQueueCreateInfo queueCreateInfo{};
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -182,7 +183,7 @@ namespace Rare {
 		static double start = glfwGetTime();
 		static double delta;
 		glfwPollEvents();//assign this to a daemon thread and lock event manager to synch assignments
-		_coreShouldClose = (delta = glfwGetTime() - start) >= 5 ? true : false;
+		_coreShouldClose = (delta = glfwGetTime() - start) >= 15 ? true : false;
 
 	}
 
@@ -206,8 +207,20 @@ namespace Rare {
 	}
 
 	bool RareCore::_isDeviceSuitable(VkPhysicalDevice device) {
+		static const std::vector<const char*> requiredDeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME }; //these are the absolute bare minimum required extensions to be considered suitable
+
 		QueueFamilyIndices indices = findQueueFamilies(device);
-		return indices.isComplete();
+
+		uint32_t extensionCount;
+		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+		std::set<std::string> requiredExtensions(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end());
+
+		for (const auto& extension : availableExtensions) requiredExtensions.erase(extension.extensionName);
+
+		return indices.isComplete() && requiredExtensions.empty();
 	}
 
 	void RareCore::_pickPhysicalDevice() {
@@ -229,31 +242,39 @@ namespace Rare {
 			int score = 0;
 
 			// Discrete GPUs have a significant performance advantage
-			if (deviceProperties.deviceType ==
-				VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-				score += 1000;
+			if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+				score += 10;
 
-			}
-
-			score += deviceProperties.limits.maxImageDimension2D;
+			float val = (deviceProperties.limits.maxImageDimension2D);
+			val = (1.0f - 0.0f) / (1000000.0f - -1000000.0f) * (val - -1000000.0f) + 0.0f;
+			score += (int)(val * 9.0f);
 
 			if (!deviceFeatures.geometryShader) {
 				RARE_ERROR("Device '{}' doesn't support geometry shaders", deviceName);//bad but not fatal
-				score = 0;
+				score -= 5;
 			}
 			if (!deviceFeatures.tessellationShader) {
 				RARE_ERROR("Device '{}' doesn't support tesselation shaders", deviceName);
-				score = 0;
+				score -= 2;
 			}
 			if (!deviceFeatures.multiViewport) {
 				RARE_WARN("Device '{}' doesn't support multiple viewports ", deviceName);
+				score -= 1;
 			}
 			return score;
 		};
 		for (const auto& device : devices) {
-			int score = rateDeviceSuitability(device);
-			candidates.insert(std::make_pair(score, device));
-
+			VkPhysicalDeviceProperties deviceProperties;
+			vkGetPhysicalDeviceProperties(device, &deviceProperties);
+			auto deviceName = deviceProperties.deviceName;
+			//must be suitable to be ranked among competing devices
+			if (_isDeviceSuitable(device)) {
+				RARE_TRACE("Device '{}' was suitable as a graphics family candidate", deviceName);
+				int score = rateDeviceSuitability(device);
+				candidates.insert(std::make_pair(score, device));
+			} else {
+				RARE_WARN("Device '{}' was not suitable for graphics queue family", deviceName);
+			}
 		}
 
 		// Check if the best candidate is suitable at all
@@ -287,7 +308,7 @@ namespace Rare {
 				indices.graphicsFamily = index;
 			VkBool32 presentSupport = false;
 			vkGetPhysicalDeviceSurfaceSupportKHR(device, index, _surface, &presentSupport);
-			if (presentSupport) indices.presentationFamily = index;
+			if (presentSupport) indices.presentationFamily = index; //same queue family 
 			if (indices.isComplete())
 				break;
 			index++;
@@ -334,21 +355,25 @@ namespace Rare {
 	bool RareCore::_checkValidationLayerSupport() {
 		uint32_t layerCount;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+		RARE_DEBUG("Available validation layers: {}", layerCount);
 
 		std::vector<VkLayerProperties> availableLayers(layerCount);
-		vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+		vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data()); //this populates availableLayers with the current usable layers, not the ones to be used
 
+		//this goes thru the available layers to find the specific layers we specified we wanted in the constructor
 		for (const char* vLayerName : _validationLayers) {
 			bool layerFound = false;
-			RARE_DEBUG("Checking '{}' validation layer", vLayerName);
+			RARE_DEBUG("Checking for availability of '{}' layer", vLayerName);
 			for (const auto& vLayerProperties : availableLayers) {
 				if (strcmp(vLayerName, vLayerProperties.layerName) == 0) {
 					layerFound = true;
+					RARE_DEBUG("\tLayer '{}' available to be used.", vLayerName);
 					break;
 				}
 			}
 
 			if (!layerFound) {
+				RARE_WARN("No layer available");
 				return false;
 			}
 		}
