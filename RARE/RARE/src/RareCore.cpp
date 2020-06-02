@@ -67,6 +67,11 @@ namespace Rare {
 		RARE_LOG("Create Swap Chain:\t Initialization complete\n");
 
 
+		//begin creating image views
+		RARE_LOG("Create Image Views:\t Begin init");
+		_createImageViews();
+		RARE_LOG("Create Image Views:\t Initialization complete\n");
+
 
 		RARE_LOG("Initialization complete");
 	}
@@ -256,6 +261,10 @@ namespace Rare {
 	}
 
 	void RareCore::dispose() {
+		for (auto imageView : _swapChainImageViews) {
+			vkDestroyImageView(_logicalDevice, imageView, nullptr);
+		}
+
 		vkDestroySwapchainKHR(_logicalDevice, _swapChain, nullptr);
 		vkDestroyDevice(_logicalDevice, nullptr);
 		vkDestroySurfaceKHR(_vkInstance, _surface, nullptr);
@@ -481,6 +490,34 @@ namespace Rare {
 		createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 		createInfo.pfnUserCallback = _debugCallback;
 		createInfo.pUserData = nullptr;
+	}
+
+	void RareCore::_createImageViews() {
+		_swapChainImageViews.resize(_swapChainImages.size());
+		for (int i = 0; i < _swapChainImages.size(); i++) {
+			VkImageViewCreateInfo createInfo{};
+			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			createInfo.image = _swapChainImages[i];
+			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			createInfo.format = _swapChainImageFormat;
+
+			//color channels
+			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+			//images purpose and which parts of image to access
+			createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			createInfo.subresourceRange.baseMipLevel = 0;
+			createInfo.subresourceRange.levelCount = 1;
+			createInfo.subresourceRange.baseArrayLayer = 0;
+			createInfo.subresourceRange.layerCount = 1;
+
+			if (vkCreateImageView(_logicalDevice, &createInfo, nullptr, &_swapChainImageViews[i]) != VK_SUCCESS) {
+				RARE_FATAL("Couldn't create image view object from image");
+			}
+		}
 	}
 
 	void RareCore::_setupDebugMessenger() {

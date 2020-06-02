@@ -51,10 +51,14 @@ namespace Rare {
 		//wsi surface integration
 		VkSurfaceKHR _surface;
 
+		//swap chain data
 		VkSwapchainKHR _swapChain;
 		std::vector<VkImage> _swapChainImages;
 		VkFormat _swapChainImageFormat;
 		VkExtent2D _swapChainExtent;
+
+		std::vector<VkImageView> swapChainImageViews;
+
 
 
 		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
@@ -66,6 +70,7 @@ namespace Rare {
 		QueueFamilyIndices _findQueueFamilies(VkPhysicalDevice device);
 		void _setupDebugMessenger();
 		bool _checkValidationLayerSupport();
+		void _createImageViews();
 		std::vector<const char*> _getRequiredExtensions();
 		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 		SwapChainSupportDetails _querySwapChainSupport(VkPhysicalDevice device);
