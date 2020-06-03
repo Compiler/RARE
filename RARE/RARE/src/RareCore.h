@@ -40,6 +40,8 @@ namespace Rare {
 		const char* _windowRefName;
 		const std::vector<const char*> _validationLayers;
 		const int _WIDTH = 640, _HEIGHT = 480;
+		const int _MAX_FRAMES_IN_FLIGHT = 2;
+		size_t _currentFrame = 0;
 
 		//vk setup core
 		VkInstance _vkInstance;
@@ -72,6 +74,12 @@ namespace Rare {
 		VkCommandPool _commandPool;
 		std::vector<VkCommandBuffer> _commandBuffers;
 
+		//Semaphores (denoted with s_)
+		std::vector<VkSemaphore> _s_imageAvailable, _s_renderFinished;
+
+		//Fences (denoted with a f_)
+		std::vector<VkFence> _f_inFlight, _f_imagesInFlight;
+
 		void _createVkInstance();
 		void _createSurface();
 		void _createLogicalDevice();
@@ -82,6 +90,7 @@ namespace Rare {
 		void _createFramebuffers();
 		void _createCommandPool();
 		void _createCommandBuffers();
+		void _createSynchronizationObjects();
 		void _pickPhysicalDevice();
 		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
 		void _setupDebugMessenger();
@@ -102,6 +111,7 @@ namespace Rare {
 		void init();
 		void update();
 		void render();
+		void waitIdle();
 		void dispose();
 
 		inline bool shouldClose() const { return _coreShouldClose; }

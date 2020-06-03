@@ -93,9 +93,14 @@ namespace Rare {
 		RARE_LOG("Create Command Pool:\t\t Initialization complete\n");
 
 		//begin creating command buffers
-		RARE_LOG("Create Command Buffers:\t\t Begin init");
+		RARE_LOG("Create Command Buffers:\t Begin init");
 		_createCommandBuffers();
-		RARE_LOG("Create Command Buffers:\t\t Initialization complete\n");
+		RARE_LOG("Create Command Buffers:\t Initialization complete\n");
+
+		//begin creating semaphores
+		RARE_LOG("Create Semaphores:\t Begin init");
+		_createSynchronizationObjects();
+		RARE_LOG("Create Semaphores:\t Initialization complete\n");
 		
 
 		RARE_LOG("Initialization complete");
@@ -282,10 +287,63 @@ namespace Rare {
 	}
 
 	void RareCore::render() {
+		vkWaitForFences(_logicalDevice, 1, &_f_inFlight[_currentFrame], VK_TRUE, UINT64_MAX);
+		
 
+		uint32_t imageIndex;
+		vkAcquireNextImageKHR(_logicalDevice, _swapChain, UINT64_MAX, _s_imageAvailable[_currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+		//check if previous frame is using this image
+		if(_f_imagesInFlight[imageIndex] != VK_NULL_HANDLE)
+			vkWaitForFences(_logicalDevice, 1, &_f_imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+		//mark image as being used by current frame
+		_f_imagesInFlight[imageIndex] = _f_inFlight[_currentFrame];
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		VkSemaphore s_wait[] = { _s_imageAvailable[_currentFrame] };
+		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = s_wait;
+		submitInfo.pWaitDstStageMask = waitStages;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &_commandBuffers[imageIndex];
+		VkSemaphore s_signal[] = { _s_renderFinished[_currentFrame] };
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = s_signal;
+
+		vkResetFences(_logicalDevice, 1, &_f_inFlight[_currentFrame]);
+
+		if (vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _f_inFlight[_currentFrame]) != VK_SUCCESS)
+			RARE_FATAL("Could not submit draw command buffer");
+
+		VkPresentInfoKHR presentInfo{};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = s_signal;
+		VkSwapchainKHR swapChains[] = { _swapChain };
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = swapChains;
+		presentInfo.pImageIndices = &imageIndex;
+		presentInfo.pResults = nullptr;
+
+		vkQueuePresentKHR(_presentationQueue, &presentInfo);
+
+		vkQueueWaitIdle(_presentationQueue);
+
+		_currentFrame = (_currentFrame + 1) % _MAX_FRAMES_IN_FLIGHT;
+	}
+
+	void RareCore::waitIdle() {
+		vkDeviceWaitIdle(_logicalDevice);
 	}
 
 	void RareCore::dispose() {
+		for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {
+			vkDestroySemaphore(_logicalDevice, _s_imageAvailable[i], nullptr);
+			vkDestroySemaphore(_logicalDevice, _s_renderFinished[i], nullptr);
+			vkDestroyFence(_logicalDevice, _f_inFlight[i], nullptr);
+		}
 		vkDestroyCommandPool(_logicalDevice, _commandPool, nullptr);
 		vkDestroyPipeline(_logicalDevice, _graphicsPipeline, nullptr);
 		vkDestroyPipelineLayout(_logicalDevice, _pipelineLayout, nullptr);
@@ -570,6 +628,13 @@ namespace Rare {
 		subpass.colorAttachmentCount = 1;
 		subpass.pColorAttachments = &colAttRef;//referenced from fragment shader in the line "layout(location = 0) out vec4 outColor;"
 
+		VkSubpassDependency dependency{};
+		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		dependency.dstSubpass = 0;
+		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.srcAccessMask = 0;
+		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
 		//Create Render Pass
 		VkRenderPassCreateInfo renderPassInfo{};
@@ -578,6 +643,8 @@ namespace Rare {
 		renderPassInfo.pAttachments = &colorAttachment;
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
+		renderPassInfo.dependencyCount = 1;
+		renderPassInfo.pDependencies = &dependency;
 
 		if (vkCreateRenderPass(_logicalDevice, &renderPassInfo, nullptr, &_renderPass) != VK_SUCCESS) {
 			RARE_FATAL("Failed to create render pass");
@@ -835,6 +902,30 @@ namespace Rare {
 			if (vkEndCommandBuffer(_commandBuffers[i]) != VK_SUCCESS) {
 				RARE_FATAL("Could not record command buffer");
 			}
+		}
+	}
+
+	void RareCore::_createSynchronizationObjects() {
+		_s_imageAvailable.resize(_MAX_FRAMES_IN_FLIGHT);
+		_s_renderFinished.resize(_MAX_FRAMES_IN_FLIGHT);
+		_f_inFlight.resize(_MAX_FRAMES_IN_FLIGHT);
+		_f_imagesInFlight.resize(_swapChainImages.size(), VK_NULL_HANDLE);
+
+		VkSemaphoreCreateInfo semaphoreInfo{};
+		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		VkFenceCreateInfo fenceInfo{};
+		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {
+			if (vkCreateSemaphore(_logicalDevice, &semaphoreInfo, nullptr, &_s_imageAvailable[i]) != VK_SUCCESS)
+				RARE_FATAL("Failed to create imageAvailable semaphore");
+			if (vkCreateSemaphore(_logicalDevice, &semaphoreInfo, nullptr, &_s_renderFinished[i]) != VK_SUCCESS)
+				RARE_FATAL("Failed to create renderFinished semaphore");
+			if (vkCreateFence(_logicalDevice, &fenceInfo, nullptr, &_f_inFlight[i]) != VK_SUCCESS)
+				RARE_FATAL("Failed to create inFlight fence");
+
 		}
 	}
 

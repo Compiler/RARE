@@ -16,7 +16,10 @@ int main() {
 	core.init();
 	while (!core.shouldClose()) {
 		core.update(); core.render();
+		core.waitIdle();
 	}
+
+	
 
 	core.dispose();
 
