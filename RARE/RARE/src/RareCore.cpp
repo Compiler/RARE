@@ -98,9 +98,9 @@ namespace Rare {
 		RARE_LOG("Create Command Buffers:\t Initialization complete\n");
 
 		//begin creating semaphores
-		RARE_LOG("Create Semaphores:\t Begin init");
+		RARE_LOG("Create Synchronization Objects: Begin init");
 		_createSynchronizationObjects();
-		RARE_LOG("Create Semaphores:\t Initialization complete\n");
+		RARE_LOG("Create Synchronization Objects: Initialization complete\n");
 		
 
 		RARE_LOG("Initialization complete");

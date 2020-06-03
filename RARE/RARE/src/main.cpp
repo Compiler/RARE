@@ -3,7 +3,6 @@
 
 
 int main() {
-	//haha here's my comment and im also dumb!
 	/*Code to put console at top left so i can read logs*/
 	HWND consoleWindow = GetConsoleWindow();
 	SetWindowPos(consoleWindow, 0, 0, 0, 0, 0, 0x0001 | 0x0004);
