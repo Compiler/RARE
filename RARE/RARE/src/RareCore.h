@@ -58,7 +58,6 @@ namespace Rare {
 		std::vector<VkImage> _swapChainImages;
 		VkFormat _swapChainImageFormat;
 		VkExtent2D _swapChainExtent;
-
 		std::vector<VkImageView> _swapChainImageViews;
 
 		//graphics pipeline
@@ -66,19 +65,28 @@ namespace Rare {
 		VkRenderPass _renderPass;
 		VkPipelineLayout _pipelineLayout;
 
+		//frame buffer
+		std::vector<VkFramebuffer> _swapChainFramebuffers;
 
-		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
+		//command buffers
+		VkCommandPool _commandPool;
+		std::vector<VkCommandBuffer> _commandBuffers;
+
 		void _createVkInstance();
 		void _createSurface();
-		void _pickPhysicalDevice();
 		void _createLogicalDevice();
 		void _createSwapChain();
-		QueueFamilyIndices _findQueueFamilies(VkPhysicalDevice device);
-		void _setupDebugMessenger();
-		bool _checkValidationLayerSupport();
 		void _createImageViews();
 		void _createRenderPass();
 		void _createGraphicsPipeline();
+		void _createFramebuffers();
+		void _createCommandPool();
+		void _createCommandBuffers();
+		void _pickPhysicalDevice();
+		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
+		void _setupDebugMessenger();
+		bool _checkValidationLayerSupport();
+		QueueFamilyIndices _findQueueFamilies(VkPhysicalDevice device);
 		VkShaderModule _createShaderModule(const std::vector<char>& code);
 		std::vector<const char*> _getRequiredExtensions();
 		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);

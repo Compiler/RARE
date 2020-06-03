@@ -81,6 +81,21 @@ namespace Rare {
 		RARE_LOG("Create Graphics Pipeline:\t Begin init");
 		_createGraphicsPipeline();
 		RARE_LOG("Create Graphics Pipeline:\t Initialization complete\n");
+
+		//begin creating framebuffers
+		RARE_LOG("Create Framebuffers:\t\t Begin init");
+		_createFramebuffers();
+		RARE_LOG("Create Framebuffers:\t\t Initialization complete\n");
+
+		//begin creating command pool
+		RARE_LOG("Create Command Pool:\t\t Begin init");
+		_createCommandPool();
+		RARE_LOG("Create Command Pool:\t\t Initialization complete\n");
+
+		//begin creating command buffers
+		RARE_LOG("Create Command Buffers:\t\t Begin init");
+		_createCommandBuffers();
+		RARE_LOG("Create Command Buffers:\t\t Initialization complete\n");
 		
 
 		RARE_LOG("Initialization complete");
@@ -271,12 +286,17 @@ namespace Rare {
 	}
 
 	void RareCore::dispose() {
+		vkDestroyCommandPool(_logicalDevice, _commandPool, nullptr);
 		vkDestroyPipeline(_logicalDevice, _graphicsPipeline, nullptr);
 		vkDestroyPipelineLayout(_logicalDevice, _pipelineLayout, nullptr);
+		for (auto framebuffer : _swapChainFramebuffers) {
+			vkDestroyFramebuffer(_logicalDevice, framebuffer, nullptr);
+		}
 		vkDestroyRenderPass(_logicalDevice, _renderPass, nullptr);
 		for (auto imageView : _swapChainImageViews) {
 			vkDestroyImageView(_logicalDevice, imageView, nullptr);
 		}
+		
 
 		vkDestroySwapchainKHR(_logicalDevice, _swapChain, nullptr);
 		vkDestroyDevice(_logicalDevice, nullptr);
@@ -739,6 +759,83 @@ namespace Rare {
 		}
 		return shaderModule;
 
+	}
+
+	void RareCore::_createFramebuffers() {
+		_swapChainFramebuffers.resize(_swapChainImageViews.size());
+		for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
+			VkImageView attachments[] = {
+				_swapChainImageViews[i]
+			};
+
+			VkFramebufferCreateInfo framebufferInfo{};
+			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			framebufferInfo.renderPass = _renderPass;
+			framebufferInfo.attachmentCount = 1;
+			framebufferInfo.pAttachments = attachments;
+			framebufferInfo.width = _swapChainExtent.width;
+			framebufferInfo.height = _swapChainExtent.height;
+			framebufferInfo.layers = 1;
+
+			if (vkCreateFramebuffer(_logicalDevice, &framebufferInfo, nullptr, &_swapChainFramebuffers[i]) != VK_SUCCESS) {
+				RARE_FATAL("Couldn't create framebuffer");
+			}
+		}
+	}
+
+	void RareCore::_createCommandPool() {
+		QueueFamilyIndices qFamIndices = _findQueueFamilies(_physicalDevice);
+
+		VkCommandPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		poolInfo.queueFamilyIndex = qFamIndices.graphicsFamily.value();
+		poolInfo.flags = 0;
+		if (vkCreateCommandPool(_logicalDevice, &poolInfo, nullptr, &_commandPool) != VK_SUCCESS) {
+			RARE_FATAL("Couldn't create Command Pool");
+		}
+	}
+	
+	void RareCore::_createCommandBuffers() {
+		_commandBuffers.resize(_swapChainFramebuffers.size());
+
+		VkCommandBufferAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.commandPool = _commandPool;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandBufferCount = (uint32_t)_commandBuffers.size();
+
+		if (vkAllocateCommandBuffers(_logicalDevice, &allocInfo, _commandBuffers.data()) != VK_SUCCESS) {
+			RARE_FATAL("Could not allocate command buffers");
+		}
+		for (size_t i = 0; i < _commandBuffers.size(); i++) {
+			VkCommandBufferBeginInfo beginInfo{};
+			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			beginInfo.flags = 0;
+			beginInfo.pInheritanceInfo = nullptr;
+
+			if (vkBeginCommandBuffer(_commandBuffers[i], &beginInfo) != VK_SUCCESS) {
+				RARE_FATAL("Could not begin recording command buffer");
+			}
+			VkRenderPassBeginInfo rpInfo{};
+			rpInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			rpInfo.renderPass = _renderPass;
+			rpInfo.framebuffer = _swapChainFramebuffers[i];
+			rpInfo.renderArea.offset = { 0, 0 };
+			rpInfo.renderArea.extent = _swapChainExtent;
+
+			VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };//clear color used for VK_ATTACHMENT_LOAD_OP_CLEAR
+			rpInfo.clearValueCount = 1;
+			rpInfo.pClearValues = &clearColor;
+
+			vkCmdBeginRenderPass(_commandBuffers[i], &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+			vkCmdBindPipeline(_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline);
+			vkCmdDraw(_commandBuffers[i], 3, 1, 0, 0);
+			vkCmdEndRenderPass(_commandBuffers[i]);
+
+			if (vkEndCommandBuffer(_commandBuffers[i]) != VK_SUCCESS) {
+				RARE_FATAL("Could not record command buffer");
+			}
+		}
 	}
 
 	void RareCore::_populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
