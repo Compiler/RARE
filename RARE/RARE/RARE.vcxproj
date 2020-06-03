@@ -102,6 +102,10 @@
     <ClInclude Include="src\RareCore.h" />
     <ClInclude Include="src\tools\Logger.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="src\shaders\FragmentShader.frag" />
+    <None Include="src\shaders\VertexShader.vert" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

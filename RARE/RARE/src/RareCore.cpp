@@ -22,56 +22,66 @@ namespace Rare {
 		//begin logger initialization
 		Rare::Logger::init();
 		
-		RARE_LOG("Logger:\t\t Initialization complete");
+		RARE_LOG("Logger:\t\t\t Initialization complete");
 
 		//begin glfw initialization
-		RARE_LOG("GLFW:\t\t\t Begin init");
+		RARE_LOG("GLFW:\t\t\t\t Begin init");
 		glfwInit();
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 		_windowRef = glfwCreateWindow(_WIDTH, _HEIGHT, _windowRefName, NULL, NULL);
 		glfwSetWindowPos(_windowRef, _WIDTH * 2, _HEIGHT);
 		glfwMakeContextCurrent(_windowRef);
-		RARE_LOG("GLFW:\t\t\t Initialization complete\n");
+		RARE_LOG("GLFW:\t\t\t\t Initialization complete\n");
 
 		//begin vk initialization
-		RARE_LOG("Vulkan:\t\t Begin init");
+		RARE_LOG("Vulkan:\t\t\t Begin init");
 		_createVkInstance();
-		RARE_LOG("Vulkan:\t\t Initialization complete\n");
+		RARE_LOG("Vulkan:\t\t\t Initialization complete\n");
 
 		//begin vk validation layers initialization
-		RARE_LOG("Validation Layers:\t Begin init");
+		RARE_LOG("Validation Layers:\t\t Begin init");
 		_setupDebugMessenger();
-		RARE_LOG("Validation Layers:\t Initialization complete\n");
+		RARE_LOG("Validation Layers:\t\t Initialization complete\n");
 
 
 		//begin creating surface device
-		RARE_LOG("Create Surface:\t Begin init");
+		RARE_LOG("Create Surface:\t\t Begin init");
 		_createSurface();
-		RARE_LOG("Create Surface:\t Initialization complete\n");
+		RARE_LOG("Create Surface:\t\t Initialization complete\n");
 
 		//begin picking physical device
-		RARE_LOG("Pick Physical Device:\t Begin init");
+		RARE_LOG("Pick Physical Device:\t\t Begin init");
 		_pickPhysicalDevice();
-		RARE_LOG("Pick Physical Device:\t Initialization complete\n");
+		RARE_LOG("Pick Physical Device:\t\t Initialization complete\n");
 
 
 		//begin creating logical device
-		RARE_LOG("Create Logical Device:\t Begin init");
+		RARE_LOG("Create Logical Device:\t\t Begin init");
 		_createLogicalDevice();
-		RARE_LOG("Create Logical Device:\t Initialization complete\n");
+		RARE_LOG("Create Logical Device:\t\t Initialization complete\n");
 
 		//begin creating swap chain
-		RARE_LOG("Create Swap Chain:\t Begin init");
+		RARE_LOG("Create Swap Chain:\t\t Begin init");
 		_createSwapChain();
-		RARE_LOG("Create Swap Chain:\t Initialization complete\n");
+		RARE_LOG("Create Swap Chain:\t\t Initialization complete\n");
 
 
 		//begin creating image views
-		RARE_LOG("Create Image Views:\t Begin init");
+		RARE_LOG("Create Image Views:\t\t Begin init");
 		_createImageViews();
-		RARE_LOG("Create Image Views:\t Initialization complete\n");
+		RARE_LOG("Create Image Views:\t\t Initialization complete\n");
 
+		//begin creating render pass
+		RARE_LOG("Create Render Pass:\t\t Begin init");
+		_createRenderPass();
+		RARE_LOG("Create Render Pass:\t\t Initialization complete\n");
+
+		//begin creating graphics pipeline
+		RARE_LOG("Create Graphics Pipeline:\t Begin init");
+		_createGraphicsPipeline();
+		RARE_LOG("Create Graphics Pipeline:\t Initialization complete\n");
+		
 
 		RARE_LOG("Initialization complete");
 	}
@@ -261,6 +271,9 @@ namespace Rare {
 	}
 
 	void RareCore::dispose() {
+		vkDestroyPipeline(_logicalDevice, _graphicsPipeline, nullptr);
+		vkDestroyPipelineLayout(_logicalDevice, _pipelineLayout, nullptr);
+		vkDestroyRenderPass(_logicalDevice, _renderPass, nullptr);
 		for (auto imageView : _swapChainImageViews) {
 			vkDestroyImageView(_logicalDevice, imageView, nullptr);
 		}
@@ -482,16 +495,6 @@ namespace Rare {
 		return returnedExtent;
 	}
 
-
-	void RareCore::_populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
-		createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-		createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-		createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-		createInfo.pfnUserCallback = _debugCallback;
-		createInfo.pUserData = nullptr;
-	}
-
 	void RareCore::_createImageViews() {
 		_swapChainImageViews.resize(_swapChainImages.size());
 		for (int i = 0; i < _swapChainImages.size(); i++) {
@@ -518,6 +521,233 @@ namespace Rare {
 				RARE_FATAL("Couldn't create image view object from image");
 			}
 		}
+	}
+
+	/*
+	-Info about framebuffer attachments that will be used while rendering
+	-Number of color and depth buffers
+	-How many samples will be used for each buffer
+	-How buffer contents should be handled throughout the rendering operations
+	*/
+	void RareCore::_createRenderPass() {
+		VkAttachmentDescription colorAttachment{};
+		colorAttachment.format = _swapChainImageFormat;
+		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;//layout used for images that are presented to the swapchain
+
+		//Create Subpasses
+		VkAttachmentReference colAttRef{};
+		colAttRef.attachment = 0;//index of attachment to reference
+		colAttRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;//layout used for images that are used as color attachments
+
+		VkSubpassDescription subpass{};
+		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;//subpass bind for graphics rather than compute
+		subpass.colorAttachmentCount = 1;
+		subpass.pColorAttachments = &colAttRef;//referenced from fragment shader in the line "layout(location = 0) out vec4 outColor;"
+
+
+		//Create Render Pass
+		VkRenderPassCreateInfo renderPassInfo{};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		renderPassInfo.attachmentCount = 1;
+		renderPassInfo.pAttachments = &colorAttachment;
+		renderPassInfo.subpassCount = 1;
+		renderPassInfo.pSubpasses = &subpass;
+
+		if (vkCreateRenderPass(_logicalDevice, &renderPassInfo, nullptr, &_renderPass) != VK_SUCCESS) {
+			RARE_FATAL("Failed to create render pass");
+		}
+
+	}
+
+	void RareCore::_createGraphicsPipeline() {
+
+		//Shader Stage Creation
+		/*
+		-Shader modules that define the functionality of the programmable stages of the graphics pipeline
+		*/
+		auto vertexShaderCode = _readFile("src/shaders/VertexShader.spv");
+		auto fragmentShaderCode = _readFile("src/shaders/FragmentShader.spv");
+		VkShaderModule vShaderMod = _createShaderModule(vertexShaderCode);
+		VkShaderModule fShaderMod = _createShaderModule(fragmentShaderCode);//note: these arent needed after pipeline creation, so they are not class members
+
+		VkPipelineShaderStageCreateInfo vShaderStageInfo{};
+		vShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		vShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		vShaderStageInfo.module = vShaderMod;
+		vShaderStageInfo.pName = "main";
+
+		VkPipelineShaderStageCreateInfo fShaderStageInfo{};
+		fShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		fShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		fShaderStageInfo.module = fShaderMod;
+		fShaderStageInfo.pName = "main";
+		
+		VkPipelineShaderStageCreateInfo shaderStages[] = { vShaderStageInfo, fShaderStageInfo };
+
+
+		//Vertex Input Stage Creation
+		VkPipelineVertexInputStateCreateInfo vInputInfo{};
+		vInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		vInputInfo.vertexBindingDescriptionCount = 0;
+		vInputInfo.pVertexBindingDescriptions = nullptr;//vertex binding descriptions specify space between data and if data is per vert or per instance
+		vInputInfo.vertexAttributeDescriptionCount = 0;
+		vInputInfo.pVertexAttributeDescriptions = nullptr;//vertex attribute descriptions specify the attribute types and binding location of attributes that get passed to the vert shader
+		
+		VkPipelineInputAssemblyStateCreateInfo inputAssenblyInfo{};
+		inputAssenblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		inputAssenblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		inputAssenblyInfo.primitiveRestartEnable = VK_FALSE;
+
+
+		//Viewport State Creation
+		VkViewport viewport{};
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.width = (float)_swapChainExtent.width;
+		viewport.height = (float)_swapChainExtent.height;
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+
+		VkRect2D scissor{};
+		scissor.offset = { 0, 0 };
+		scissor.extent = _swapChainExtent;
+
+		VkPipelineViewportStateCreateInfo viewportState{};
+		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		viewportState.viewportCount = 1;
+		viewportState.pViewports = &viewport;
+		viewportState.scissorCount = 1;
+		viewportState.pScissors = &scissor;
+
+
+		//Rasterization Stage Creation
+		VkPipelineRasterizationStateCreateInfo rasterizer{};
+		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		rasterizer.depthClampEnable = VK_FALSE;
+		rasterizer.rasterizerDiscardEnable = VK_FALSE;
+		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+		rasterizer.lineWidth = 1.0f;
+		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+		rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;//Vertex winding order
+		rasterizer.depthBiasEnable = VK_FALSE;
+		rasterizer.depthBiasConstantFactor = 0.0f;
+		rasterizer.depthBiasClamp = 0.0f;
+		rasterizer.depthBiasSlopeFactor = 0.0f;
+
+
+		//Multisanpling State Creation
+		VkPipelineMultisampleStateCreateInfo multisampler{};
+		multisampler.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multisampler.sampleShadingEnable = VK_FALSE;
+		multisampler.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+		multisampler.minSampleShading = 1.0f;
+		multisampler.pSampleMask = nullptr;
+		multisampler.alphaToCoverageEnable = VK_FALSE;
+		multisampler.alphaToOneEnable = VK_FALSE;
+
+
+		//Color Blending Options
+		VkPipelineColorBlendAttachmentState colBlendAttach{};
+		colBlendAttach.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		colBlendAttach.blendEnable = VK_TRUE;
+		colBlendAttach.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+		colBlendAttach.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		colBlendAttach.colorBlendOp = VK_BLEND_OP_ADD;
+		colBlendAttach.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		colBlendAttach.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		colBlendAttach.alphaBlendOp = VK_BLEND_OP_ADD;
+
+		VkPipelineColorBlendStateCreateInfo colBlend{};
+		colBlend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		colBlend.logicOpEnable = VK_FALSE;//use bitwise operation for color blending. this will override blendEnable
+		colBlend.logicOp = VK_LOGIC_OP_COPY;//specify bitwise operation for color blending
+		colBlend.attachmentCount = 1;
+		colBlend.pAttachments = &colBlendAttach;
+		colBlend.blendConstants[0] = 0.0f;
+		colBlend.blendConstants[1] = 0.0f;
+		colBlend.blendConstants[2] = 0.0f;
+		colBlend.blendConstants[3] = 0.0f;
+
+
+		//Pipeline states that can be changed without recreating the pipeline
+		VkDynamicState dynamicStates[] = {
+			VK_DYNAMIC_STATE_VIEWPORT,
+			VK_DYNAMIC_STATE_LINE_WIDTH
+		};
+
+		VkPipelineDynamicStateCreateInfo dynamicState{};
+		dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		dynamicState.dynamicStateCount = 2;
+		dynamicState.pDynamicStates = dynamicStates;
+
+
+		//Pipeline layout
+		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutInfo.setLayoutCount = 0;
+		pipelineLayoutInfo.pSetLayouts = nullptr;
+		pipelineLayoutInfo.pushConstantRangeCount = 0;
+		pipelineLayoutInfo.pPushConstantRanges = nullptr;
+
+		if (vkCreatePipelineLayout(_logicalDevice, &pipelineLayoutInfo, nullptr, &_pipelineLayout) != VK_SUCCESS) {
+			RARE_FATAL("Failed to create pipeline layout");
+		}
+
+
+		//Actual Pipeline Creation
+		VkGraphicsPipelineCreateInfo pipelineInfo{};
+		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		pipelineInfo.stageCount = 2;
+		pipelineInfo.pStages = shaderStages;
+		pipelineInfo.pVertexInputState = &vInputInfo;
+		pipelineInfo.pInputAssemblyState = &inputAssenblyInfo;
+		pipelineInfo.pViewportState = &viewportState;
+		pipelineInfo.pRasterizationState = &rasterizer;
+		pipelineInfo.pMultisampleState = &multisampler;
+		pipelineInfo.pColorBlendState = &colBlend;
+		pipelineInfo.pDepthStencilState = nullptr;
+		pipelineInfo.pDynamicState = nullptr; //to be implemented later?
+		pipelineInfo.layout = _pipelineLayout;
+		pipelineInfo.renderPass = _renderPass;
+		pipelineInfo.subpass = 0;
+		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+		pipelineInfo.basePipelineIndex = -1;
+
+		if (vkCreateGraphicsPipelines(_logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_graphicsPipeline) != VK_SUCCESS) {
+			RARE_FATAL("Failed to create graphics pipeline");
+		}
+
+		vkDestroyShaderModule(_logicalDevice, fShaderMod, nullptr);
+		vkDestroyShaderModule(_logicalDevice, vShaderMod, nullptr);
+	}
+
+	VkShaderModule RareCore::_createShaderModule(const std::vector<char>& code) {
+		VkShaderModuleCreateInfo createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		createInfo.codeSize = code.size();
+		createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+
+		VkShaderModule shaderModule;
+		if (vkCreateShaderModule(_logicalDevice, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+			RARE_FATAL("Couldn't create shader module");
+		}
+		return shaderModule;
+
+	}
+
+	void RareCore::_populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+		createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+		createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+		createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+		createInfo.pfnUserCallback = _debugCallback;
+		createInfo.pUserData = nullptr;
 	}
 
 	void RareCore::_setupDebugMessenger() {

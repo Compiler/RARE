@@ -9,6 +9,8 @@
 #include <set>
 #include <cstdint>
 #include <algorithm>
+#include <fstream>
+#include <string>
 
 
 namespace Rare {
@@ -57,8 +59,12 @@ namespace Rare {
 		VkFormat _swapChainImageFormat;
 		VkExtent2D _swapChainExtent;
 
-		std::vector<VkImageView> swapChainImageViews;
+		std::vector<VkImageView> _swapChainImageViews;
 
+		//graphics pipeline
+		VkPipeline _graphicsPipeline;
+		VkRenderPass _renderPass;
+		VkPipelineLayout _pipelineLayout;
 
 
 		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
@@ -71,13 +77,16 @@ namespace Rare {
 		void _setupDebugMessenger();
 		bool _checkValidationLayerSupport();
 		void _createImageViews();
+		void _createRenderPass();
+		void _createGraphicsPipeline();
+		VkShaderModule _createShaderModule(const std::vector<char>& code);
 		std::vector<const char*> _getRequiredExtensions();
 		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 		SwapChainSupportDetails _querySwapChainSupport(VkPhysicalDevice device);
 		VkSurfaceFormatKHR _chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 		VkPresentModeKHR _chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 		VkExtent2D _chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-		
+
 	public:
 		RareCore();
 		RareCore(const char* windowName);
@@ -109,7 +118,19 @@ namespace Rare {
 
 
 
+		static std::vector<char> _readFile(const std::string& filename) {
+			std::ifstream file(filename, std::ios::ate | std::ios::binary);
+			if (!file.is_open()) {
+				RARE_FATAL("Failed to open file: \t{}", filename);
+			}
+			size_t fileSize = (size_t)file.tellg();
+			std::vector<char> buffer(fileSize);
+			file.seekg(0);
+			file.read(buffer.data(), fileSize);
+			file.close();
 
+			return buffer;
+		}
 
 		static VKAPI_ATTR VkBool32 VKAPI_CALL _debugCallback(
 			VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
