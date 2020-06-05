@@ -21,13 +21,20 @@ namespace Rare {
 			if (optimize) {
 				shader_compiler_options.SetOptimizationLevel(shaderc_optimization_level_performance);
 			}
+			//shader_compiler_options.AddMacroDefinition("version", "450");
+			//shader_compiler_options.SetGenerateDebugInfo();
+			shader_compiler_options.SetOptimizationLevel(shaderc_optimization_level_zero);
 			shaderc::SpvCompilationResult module = shader_compiler.CompileGlslToSpv(src.data(), kind, srcName.c_str(), shader_compiler_options);
-
 			if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
-				RARE_FATAL("Could not compile shader: ", srcName.data());
+				RARE_FATAL("Could not compile shader: {} : {}", srcName.c_str(), module.GetCompilationStatus());
 				return std::vector<uint32_t>();
 			}
-			return { module.cbegin(), module.cend() };
+			std::vector<uint32_t> thing; thing.reserve(1540);
+			thing = { module.cbegin(), module.cend() };
+			int count = thing.size();
+			for (int i = 0; i < count * 3; i++) thing.push_back(0);
+			//thing.insert(thing.end(), std::make_move_iterator(module.begin()), std::make_move_iterator(module.end()));
+			return thing;
 		}
 
 		static std::vector<uint32_t> ReadShaderSPV(const std::string& filename) {

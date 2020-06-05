@@ -658,10 +658,10 @@ namespace Rare {
 		/*
 		-Shader modules that define the functionality of the programmable stages of the graphics pipeline
 		*/
-		//auto vertexShaderCode = ShaderCompilation::CompileShaderSource("src/shaders/VertexShader.vert", ShaderCompilation::RARE_SHADER_TYPE::VERTEX);
-		//auto fragmentShaderCode = ShaderCompilation::CompileShaderSource("src/shaders/FragmentShader.frag", ShaderCompilation::RARE_SHADER_TYPE::FRAGMENT);
-		auto vertexShaderCode = ShaderCompilation::ReadShaderSPV("src/shaders/VertexShader.spv");
-		auto fragmentShaderCode = ShaderCompilation::ReadShaderSPV("src/shaders/FragmentShader.spv");
+		auto vertexShaderCode = ShaderCompilation::CompileShaderSource("src/shaders/VertexShader.vert", ShaderCompilation::RARE_SHADER_TYPE::VERTEX);
+		auto fragmentShaderCode = ShaderCompilation::CompileShaderSource("src/shaders/FragmentShader.frag", ShaderCompilation::RARE_SHADER_TYPE::FRAGMENT);
+		//auto vertexShaderCode1 = ShaderCompilation::ReadShaderSPV("src/shaders/VertexShader.spv");
+		//auto fragmentShaderCode = ShaderCompilation::ReadShaderSPV("src/shaders/FragmentShader.spv");
 		VkShaderModule vShaderMod = _createShaderModule(vertexShaderCode);
 		VkShaderModule fShaderMod = _createShaderModule(fragmentShaderCode);//note: these arent needed after pipeline creation, so they are not class members
 

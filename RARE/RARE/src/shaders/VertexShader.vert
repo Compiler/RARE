@@ -1,6 +1,7 @@
-#version 450
+#version 460
 #extension GL_ARB_separate_shader_objects : enable
-
+//sup
+//supa
 layout(location = 0) out vec3 fragColor;
 
 vec2 positions[3] = vec2[](
