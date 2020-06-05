@@ -658,8 +658,10 @@ namespace Rare {
 		/*
 		-Shader modules that define the functionality of the programmable stages of the graphics pipeline
 		*/
-		auto vertexShaderCode = _readFile("src/shaders/VertexShader.spv");
-		auto fragmentShaderCode = _readFile("src/shaders/FragmentShader.spv");
+		//auto vertexShaderCode = ShaderCompilation::CompileShaderSource("src/shaders/VertexShader.vert", ShaderCompilation::RARE_SHADER_TYPE::VERTEX);
+		//auto fragmentShaderCode = ShaderCompilation::CompileShaderSource("src/shaders/FragmentShader.frag", ShaderCompilation::RARE_SHADER_TYPE::FRAGMENT);
+		auto vertexShaderCode = ShaderCompilation::ReadShaderSPV("src/shaders/VertexShader.spv");
+		auto fragmentShaderCode = ShaderCompilation::ReadShaderSPV("src/shaders/FragmentShader.spv");
 		VkShaderModule vShaderMod = _createShaderModule(vertexShaderCode);
 		VkShaderModule fShaderMod = _createShaderModule(fragmentShaderCode);//note: these arent needed after pipeline creation, so they are not class members
 
@@ -814,11 +816,11 @@ namespace Rare {
 		vkDestroyShaderModule(_logicalDevice, vShaderMod, nullptr);
 	}
 
-	VkShaderModule RareCore::_createShaderModule(const std::vector<char>& code) {
+	VkShaderModule RareCore::_createShaderModule(const std::vector<uint32_t>& code) {
 		VkShaderModuleCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		createInfo.codeSize = code.size();
-		createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+		createInfo.pCode = code.data();
 
 		VkShaderModule shaderModule;
 		if (vkCreateShaderModule(_logicalDevice, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {

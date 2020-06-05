@@ -32,6 +32,9 @@
     <ClInclude Include="src\RareCore.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\shaders\ShaderCompilation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\VertexShader.vert" />
