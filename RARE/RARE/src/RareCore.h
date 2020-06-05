@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <fstream>
 #include <string>
-
+#include <shaders/ShaderCompilation.h>
 
 namespace Rare {
 	struct SwapChainSupportDetails {
@@ -96,7 +96,7 @@ namespace Rare {
 		void _setupDebugMessenger();
 		bool _checkValidationLayerSupport();
 		QueueFamilyIndices _findQueueFamilies(VkPhysicalDevice device);
-		VkShaderModule _createShaderModule(const std::vector<char>& code);
+		VkShaderModule _createShaderModule(const std::vector<uint32_t>& code);
 		std::vector<const char*> _getRequiredExtensions();
 		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 		SwapChainSupportDetails _querySwapChainSupport(VkPhysicalDevice device);
@@ -136,19 +136,6 @@ namespace Rare {
 
 
 
-		static std::vector<char> _readFile(const std::string& filename) {
-			std::ifstream file(filename, std::ios::ate | std::ios::binary);
-			if (!file.is_open()) {
-				RARE_FATAL("Failed to open file: \t{}", filename);
-			}
-			size_t fileSize = (size_t)file.tellg();
-			std::vector<char> buffer(fileSize);
-			file.seekg(0);
-			file.read(buffer.data(), fileSize);
-			file.close();
-
-			return buffer;
-		}
 
 		static VKAPI_ATTR VkBool32 VKAPI_CALL _debugCallback(
 			VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
