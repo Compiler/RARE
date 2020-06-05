@@ -29,11 +29,8 @@ namespace Rare {
 				RARE_FATAL("Could not compile shader: {} : {}", srcName.c_str(), module.GetCompilationStatus());
 				return std::vector<uint32_t>();
 			}
-			static size_t conversion = sizeof(uint32_t) / sizeof(char);
-			std::vector<uint32_t> thing = { module.cbegin(), module.cend() };
-			int count = thing.size() * (conversion - 1);
-			for (int i = 0; i < count; i++) thing.push_back(0);
-			//thing.insert(thing.end(), std::make_move_iterator(module.begin()), std::make_move_iterator(module.end()));
+			std::vector<uint32_t> thing = { module.begin(), module.end() };
+			thing.resize(thing.size() * (sizeof(uint32_t) / sizeof(char)), 0);
 			return thing;
 		}
 
