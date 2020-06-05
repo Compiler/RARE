@@ -29,10 +29,10 @@ namespace Rare {
 				RARE_FATAL("Could not compile shader: {} : {}", srcName.c_str(), module.GetCompilationStatus());
 				return std::vector<uint32_t>();
 			}
-			std::vector<uint32_t> thing; thing.reserve(1540);
-			thing = { module.cbegin(), module.cend() };
-			int count = thing.size();
-			for (int i = 0; i < count * 3; i++) thing.push_back(0);
+			static size_t conversion = sizeof(uint32_t) / sizeof(char);
+			std::vector<uint32_t> thing = { module.cbegin(), module.cend() };
+			int count = thing.size() * (conversion - 1);
+			for (int i = 0; i < count; i++) thing.push_back(0);
 			//thing.insert(thing.end(), std::make_move_iterator(module.begin()), std::make_move_iterator(module.end()));
 			return thing;
 		}
@@ -63,12 +63,12 @@ namespace Rare {
 			file.seekg(0);
 			file.read(buffer.data(), fileSize);
 			file.close();
-
+			
 			switch (type) {
-			case VERTEX:
-				return compile(filename, shaderc_glsl_vertex_shader, buffer);
-			case FRAGMENT:
-				return compile(filename, shaderc_glsl_fragment_shader, buffer);
+				case VERTEX:
+					return compile(filename, shaderc_glsl_vertex_shader, buffer);
+				case FRAGMENT:
+					return compile(filename, shaderc_glsl_fragment_shader, buffer);
 			}
 			return compile(filename, shaderc_glsl_infer_from_source, buffer);
 		}
