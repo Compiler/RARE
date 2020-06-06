@@ -757,13 +757,17 @@ namespace Rare {
 		VkPipelineShaderStageCreateInfo shaderStages[] = { vShaderStageInfo, fShaderStageInfo };
 
 
+		//vertex shader attribute descriptions
+		auto bindingDescription = VertexData::getBindingDescription();
+		auto attributeDescriptions = VertexData::getAttributeDescriptions();
+
 		//Vertex Input Stage Creation
 		VkPipelineVertexInputStateCreateInfo vInputInfo{};
 		vInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vInputInfo.vertexBindingDescriptionCount = 0;
-		vInputInfo.pVertexBindingDescriptions = nullptr;//vertex binding descriptions specify space between data and if data is per vert or per instance
-		vInputInfo.vertexAttributeDescriptionCount = 0;
-		vInputInfo.pVertexAttributeDescriptions = nullptr;//vertex attribute descriptions specify the attribute types and binding location of attributes that get passed to the vert shader
+		vInputInfo.vertexBindingDescriptionCount = 1;
+		vInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+		vInputInfo.pVertexBindingDescriptions = &bindingDescription;//vertex binding descriptions specify space between data and if data is per vert or per instance
+		vInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();//vertex attribute descriptions specify the attribute types and binding location of attributes that get passed to the vert shader
 		
 		VkPipelineInputAssemblyStateCreateInfo inputAssenblyInfo{};
 		inputAssenblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
