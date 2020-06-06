@@ -310,8 +310,10 @@ namespace Rare {
 		
 
 		uint32_t imageIndex;
-		vkAcquireNextImageKHR(_logicalDevice, _swapChain, UINT64_MAX, _s_imageAvailable[_currentFrame], VK_NULL_HANDLE, &imageIndex);
-
+		VkResult acquireResult = vkAcquireNextImageKHR(_logicalDevice, _swapChain, UINT64_MAX, _s_imageAvailable[_currentFrame], VK_NULL_HANDLE, &imageIndex);
+		if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR) {
+			_recreateSwapChain();//go back to section
+		}
 		//check if previous frame is using this image
 		if(_f_imagesInFlight[imageIndex] != VK_NULL_HANDLE)
 			vkWaitForFences(_logicalDevice, 1, &_f_imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
@@ -358,35 +360,31 @@ namespace Rare {
 	}
 
 	void RareCore::dispose() {
+		_cleanupSwapChain();
+
 		for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {
 			vkDestroySemaphore(_logicalDevice, _s_imageAvailable[i], nullptr);
 			vkDestroySemaphore(_logicalDevice, _s_renderFinished[i], nullptr);
 			vkDestroyFence(_logicalDevice, _f_inFlight[i], nullptr);
-		}
-		vkDestroyCommandPool(_logicalDevice, _commandPool, nullptr);
-		vkDestroyPipeline(_logicalDevice, _graphicsPipeline, nullptr);
-		vkDestroyPipelineLayout(_logicalDevice, _pipelineLayout, nullptr);
-		for (auto framebuffer : _swapChainFramebuffers) {
-			vkDestroyFramebuffer(_logicalDevice, framebuffer, nullptr);
-		}
-		vkDestroyRenderPass(_logicalDevice, _renderPass, nullptr);
-		for (auto imageView : _swapChainImageViews) {
-			vkDestroyImageView(_logicalDevice, imageView, nullptr);
-		}
-		
 
-		vkDestroySwapchainKHR(_logicalDevice, _swapChain, nullptr);
+		}
+
+		vkDestroyCommandPool(_logicalDevice, _commandPool, nullptr);
+
 		vkDestroyDevice(_logicalDevice, nullptr);
-		vkDestroySurfaceKHR(_vkInstance, _surface, nullptr);
+
 		if (_enableValidationLayers) {
 			DestroyDebugUtilsMessengerEXT(_vkInstance, _debugMessenger, nullptr);
 		}
 
+		vkDestroySurfaceKHR(_vkInstance, _surface, nullptr);
 		vkDestroyInstance(_vkInstance, nullptr);
 
 		glfwDestroyWindow(_windowRef);
+
 		glfwTerminate();
-	
+
+
 		RARE_LOG("{} Window closed", _windowRefName);
 	}
 
@@ -581,7 +579,10 @@ namespace Rare {
 			returnedExtent = capabilities.currentExtent;
 
 		} else {
-			VkExtent2D actualExtent = { _WIDTH, _HEIGHT };
+			int currentWidth, currentHeight;
+			glfwGetFramebufferSize(_windowRef, &currentWidth, &currentHeight);
+
+			VkExtent2D actualExtent = { static_cast<uint32_t>(currentWidth),  static_cast<uint32_t>(currentHeight) };
 
 			actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
 			actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
@@ -632,8 +633,8 @@ namespace Rare {
 		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;//VK_ATTACHMENT_LOAD_OP_LOAD
 		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		//colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		//colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;//layout used for images that are presented to the swapchain
 
@@ -671,6 +672,42 @@ namespace Rare {
 
 	}
 
+
+	void RareCore::_cleanupSwapChain() {
+		for (size_t i = 0; i < _swapChainFramebuffers.size(); i++) {
+
+			vkDestroyFramebuffer(_logicalDevice, _swapChainFramebuffers[i], nullptr);
+
+			vkFreeCommandBuffers(_logicalDevice, _commandPool, static_cast<uint32_t>(_commandBuffers.size()), _commandBuffers.data());
+
+			vkDestroyPipeline(_logicalDevice, _graphicsPipeline, nullptr);
+			vkDestroyPipelineLayout(_logicalDevice, _pipelineLayout, nullptr);
+			vkDestroyRenderPass(_logicalDevice, _renderPass, nullptr);
+
+			for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
+				vkDestroyImageView(_logicalDevice, _swapChainImageViews[i], nullptr);
+
+			}
+			vkDestroySwapchainKHR(_logicalDevice, _swapChain, nullptr);
+		}
+	}
+
+	void RareCore::_recreateSwapChain() {
+		
+		 vkDeviceWaitIdle(_logicalDevice);
+		
+		 _cleanupSwapChain();
+
+		 _createSwapChain();
+		 _createImageViews(); 
+		 _createRenderPass(); //depends on format of swap chain images
+		 _createGraphicsPipeline();
+		 _createFramebuffers();
+		 _createCommandBuffers();
+
+
+	}
+
 	void RareCore::_createGraphicsPipeline() {
 
 		//Shader Stage Creation
@@ -678,7 +715,7 @@ namespace Rare {
 		-Shader modules that define the functionality of the programmable stages of the graphics pipeline
 		*/
 		auto vertexShaderCode = ShaderCompilation::CompileShaderSource(RARE_INTERNAL("shaders/VertexShader.vert"), ShaderCompilation::RARE_SHADER_TYPE::VERTEX);
-		auto fragmentShaderCode = ShaderCompilation::CompileShaderSource(RARE_INTERNAL_SHADER("RayMarching.frag"), ShaderCompilation::RARE_SHADER_TYPE::FRAGMENT);
+		auto fragmentShaderCode = ShaderCompilation::CompileShaderSource(RARE_INTERNAL_SHADER("FragmentShader.frag"/*"RayMarching.frag"*/), ShaderCompilation::RARE_SHADER_TYPE::FRAGMENT);
 		//auto vertexShaderCode1 = ShaderCompilation::ReadShaderSPV("src/shaders/VertexShader.spv");
 		//auto fragmentShaderCode = ShaderCompilation::ReadShaderSPV("src/shaders/FragmentShader.spv");
 		VkShaderModule vShaderMod = _createShaderModule(vertexShaderCode);
@@ -741,7 +778,7 @@ namespace Rare {
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
-		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;//VK_CULL_MODE_NONE
 		rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;//Vertex winding order
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f;

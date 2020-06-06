@@ -96,13 +96,17 @@ namespace Rare {
 		void _createCommandBuffers();
 		void _createSynchronizationObjects();
 		void _pickPhysicalDevice();
-		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
 		void _setupDebugMessenger();
+		void _recreateSwapChain();
+		void _cleanupSwapChain();
+		
+		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+		
+		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
 		bool _checkValidationLayerSupport();
 		QueueFamilyIndices _findQueueFamilies(VkPhysicalDevice device);
 		VkShaderModule _createShaderModule(const std::vector<uint32_t>& code);
 		std::vector<const char*> _getRequiredExtensions();
-		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 		SwapChainSupportDetails _querySwapChainSupport(VkPhysicalDevice device);
 		VkSurfaceFormatKHR _chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 		VkPresentModeKHR _chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
