@@ -94,12 +94,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\Tools\GLFWCallbacks.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\PhysicalDevices\GPUDevice.cpp" />
     <ClCompile Include="src\RareCore.cpp" />
     <ClCompile Include="src\Tools\Logger.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Tools\GLFWCallbacks.h" />
     <ClInclude Include="src\PhysicalDevices\GPUDevice.h" />
     <ClInclude Include="src\RareCore.h" />
     <ClInclude Include="src\Rendering\FileTypes\ShaderCompilation.h" />

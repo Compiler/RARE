@@ -27,6 +27,9 @@
     <ClCompile Include="src\PhysicalDevices\GPUDevice.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Tools\GLFWCallbacks.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RareCore.h">
@@ -39,6 +42,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\PhysicalDevices\GPUDevice.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Tools\GLFWCallbacks.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

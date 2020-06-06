@@ -28,8 +28,11 @@ namespace Rare {
 		RARE_LOG("GLFW:\t\t\t\t Begin init");
 		glfwInit();
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 		_windowRef = glfwCreateWindow(_WIDTH, _HEIGHT, _windowRefName, NULL, NULL);
+		glfwSetFramebufferSizeCallback(_windowRef, GLFWCallbacks::framebufferResizeCallback);
+		glfwSetWindowUserPointer(_windowRef, this);
+
 		glfwSetWindowPos(_windowRef, _WIDTH * 2, _HEIGHT);
 		glfwMakeContextCurrent(_windowRef);
 		RARE_LOG("GLFW:\t\t\t\t Initialization complete\n");
@@ -281,7 +284,7 @@ namespace Rare {
 	void RareCore::update() {
 		static double start = glfwGetTime();
 		static double delta;
-		//glfwPollEvents();//assign this to a daemon thread and lock event manager to synch assignments
+		glfwPollEvents();//assign this to a daemon thread and lock event manager to synch assignments
 		_coreShouldClose = (delta = glfwGetTime() - start) >= 44 ? true : false;
 
 	}
@@ -311,8 +314,13 @@ namespace Rare {
 
 		uint32_t imageIndex;
 		VkResult acquireResult = vkAcquireNextImageKHR(_logicalDevice, _swapChain, UINT64_MAX, _s_imageAvailable[_currentFrame], VK_NULL_HANDLE, &imageIndex);
-		if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR) {
+		/*This result means that the swap chain is no longer in a condition sufficient enough to continue using(something changed)*/
+		if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR || acquireResult == VK_SUBOPTIMAL_KHR || framebufferResized) {
+			framebufferResized = false;
 			_recreateSwapChain();//go back to section
+			RARE_DEBUG("Swap chain recreated");
+		} else if (acquireResult != VK_SUCCESS) {
+			RARE_FATAL("Swap chain image couldn't be presented");
 		}
 		//check if previous frame is using this image
 		if(_f_imagesInFlight[imageIndex] != VK_NULL_HANDLE)
@@ -583,7 +591,6 @@ namespace Rare {
 			glfwGetFramebufferSize(_windowRef, &currentWidth, &currentHeight);
 
 			VkExtent2D actualExtent = { static_cast<uint32_t>(currentWidth),  static_cast<uint32_t>(currentHeight) };
-
 			actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
 			actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
 			returnedExtent = actualExtent;
@@ -674,22 +681,25 @@ namespace Rare {
 
 
 	void RareCore::_cleanupSwapChain() {
+		RARE_LOG("Beginning cleaning of swap chain");
 		for (size_t i = 0; i < _swapChainFramebuffers.size(); i++) {
 
 			vkDestroyFramebuffer(_logicalDevice, _swapChainFramebuffers[i], nullptr);
-
-			vkFreeCommandBuffers(_logicalDevice, _commandPool, static_cast<uint32_t>(_commandBuffers.size()), _commandBuffers.data());
-
-			vkDestroyPipeline(_logicalDevice, _graphicsPipeline, nullptr);
-			vkDestroyPipelineLayout(_logicalDevice, _pipelineLayout, nullptr);
-			vkDestroyRenderPass(_logicalDevice, _renderPass, nullptr);
-
-			for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
-				vkDestroyImageView(_logicalDevice, _swapChainImageViews[i], nullptr);
-
-			}
-			vkDestroySwapchainKHR(_logicalDevice, _swapChain, nullptr);
 		}
+		vkFreeCommandBuffers(_logicalDevice, _commandPool, static_cast<uint32_t>(_commandBuffers.size()), _commandBuffers.data());
+
+
+		vkDestroyPipeline(_logicalDevice, _graphicsPipeline, nullptr);
+		vkDestroyPipelineLayout(_logicalDevice, _pipelineLayout, nullptr);
+		vkDestroyRenderPass(_logicalDevice, _renderPass, nullptr);
+
+		for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
+			vkDestroyImageView(_logicalDevice, _swapChainImageViews[i], nullptr);
+		}
+		vkDestroySwapchainKHR(_logicalDevice, _swapChain, nullptr);
+
+		RARE_LOG("Ended cleaning of swap chain");
+
 	}
 
 	void RareCore::_recreateSwapChain() {

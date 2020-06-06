@@ -12,6 +12,7 @@
 #include <fstream>
 #include <string>
 #include <Rendering/FileTypes/ShaderCompilation.h>
+#include <Tools/GLFWCallbacks.h>
 
 
 #define RARE_INTERNAL(x) "resources/" x
@@ -84,6 +85,7 @@ namespace Rare {
 		//Fences (denoted with a f_)
 		std::vector<VkFence> _f_inFlight, _f_imagesInFlight;
 
+
 		void _createVkInstance();
 		void _createSurface();
 		void _createLogicalDevice();
@@ -113,6 +115,9 @@ namespace Rare {
 		VkExtent2D _chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
 	public:
+
+		bool framebufferResized = false;
+
 		RareCore();
 		RareCore(const char* windowName);
 		RareCore(const char* windowName, const std::vector<const char*> validationLayers);
@@ -153,7 +158,7 @@ namespace Rare {
 			if (messageSeverity > VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 				RARE_FATAL("{}:{}\t{}", __FILENAME__, __LINE__, pCallbackData->pMessage)
 			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-				RARE_ERROR("{}:{}\t{}", __FILENAME__, __LINE__, pCallbackData->pMessage);
+				RARE_ERROR("\n{}:{}\t{}\n", __FILENAME__, __LINE__, pCallbackData->pMessage);
 			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
 				RARE_WARN("{}:{}\t{}", __FILENAME__, __LINE__, pCallbackData->pMessage);
 			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
