@@ -108,8 +108,9 @@
   <ItemGroup>
     <None Include="resources\compile.bat" />
     <None Include="resources\shaders\FragmentShader.frag" />
-    <None Include="resources\shaders\FragmentShader.spv" />
-    <None Include="resources\shaders\VertexShader.spv" />
+    <None Include="resources\shaders\spv\FragmentShader.spv" />
+    <None Include="resources\shaders\RayMarching.frag" />
+    <None Include="resources\shaders\spv\VertexShader.spv" />
     <None Include="resources\shaders\VertexShader.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

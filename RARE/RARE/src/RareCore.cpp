@@ -282,20 +282,29 @@ namespace Rare {
 		static double start = glfwGetTime();
 		static double delta;
 		//glfwPollEvents();//assign this to a daemon thread and lock event manager to synch assignments
-		_coreShouldClose = (delta = glfwGetTime() - start) >= 15 ? true : false;
+		_coreShouldClose = (delta = glfwGetTime() - start) >= 44 ? true : false;
 
 	}
 
 	void RareCore::render() {
-		static int count = 0;
-		static double start = glfwGetTime();
-		static double delta;
-		count++;
-		delta = glfwGetTime() - start;
-		if (delta >= 1) {
-			RARE_WARN("FPS: {}\t{}", count, delta);
-			count = 0; start = glfwGetTime();
-			delta = 0;
+		static int frameCount = 0;
+		static double startFPS = glfwGetTime();
+		static double startMS = glfwGetTime();
+		static double deltaFPS;
+		static double deltaMS;
+		deltaMS = glfwGetTime() - startMS;
+		startMS = glfwGetTime();
+
+		//uncomment for frame time comparisons
+		//RARE_TRACE("MS: {}", deltaMS); 
+
+		frameCount++;
+		deltaFPS = glfwGetTime() - startFPS;
+		if (deltaFPS >= 1) {
+			RARE_WARN("FPS: {}", frameCount);
+			RARE_WARN("MS: {}", deltaMS);
+			frameCount = 0; startFPS = glfwGetTime();
+			deltaFPS = 0;
 		}
 		vkWaitForFences(_logicalDevice, 1, &_f_inFlight[_currentFrame], VK_TRUE, UINT64_MAX);
 		
@@ -621,7 +630,7 @@ namespace Rare {
 		VkAttachmentDescription colorAttachment{};
 		colorAttachment.format = _swapChainImageFormat;
 		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;//VK_ATTACHMENT_LOAD_OP_LOAD
 		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -669,7 +678,7 @@ namespace Rare {
 		-Shader modules that define the functionality of the programmable stages of the graphics pipeline
 		*/
 		auto vertexShaderCode = ShaderCompilation::CompileShaderSource(RARE_INTERNAL("shaders/VertexShader.vert"), ShaderCompilation::RARE_SHADER_TYPE::VERTEX);
-		auto fragmentShaderCode = ShaderCompilation::CompileShaderSource(RARE_INTERNAL_SHADER("FragmentShader.frag"), ShaderCompilation::RARE_SHADER_TYPE::FRAGMENT);
+		auto fragmentShaderCode = ShaderCompilation::CompileShaderSource(RARE_INTERNAL_SHADER("RayMarching.frag"), ShaderCompilation::RARE_SHADER_TYPE::FRAGMENT);
 		//auto vertexShaderCode1 = ShaderCompilation::ReadShaderSPV("src/shaders/VertexShader.spv");
 		//auto fragmentShaderCode = ShaderCompilation::ReadShaderSPV("src/shaders/FragmentShader.spv");
 		VkShaderModule vShaderMod = _createShaderModule(vertexShaderCode);
@@ -870,6 +879,7 @@ namespace Rare {
 		if (vkCreateCommandPool(_logicalDevice, &poolInfo, nullptr, &_commandPool) != VK_SUCCESS) {
 			RARE_FATAL("Couldn't create Command Pool");
 		}
+		RARE_LOG("Command pool for graphics	queue family created");
 	}
 	
 	void RareCore::_createCommandBuffers() {
@@ -900,7 +910,7 @@ namespace Rare {
 			rpInfo.renderArea.offset = { 0, 0 };
 			rpInfo.renderArea.extent = _swapChainExtent;
 
-			VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };//clear color used for VK_ATTACHMENT_LOAD_OP_CLEAR
+			VkClearValue clearColor = { 0.3f, 0.3f, 0.35f, 1.0f };//clear color used for VK_ATTACHMENT_LOAD_OP_CLEAR
 			rpInfo.clearValueCount = 1;
 			rpInfo.pClearValues = &clearColor;
 

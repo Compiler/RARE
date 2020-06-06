@@ -45,10 +45,11 @@
   <ItemGroup>
     <None Include="resources\shaders\FragmentShader.frag" />
     <None Include="resources\shaders\VertexShader.vert" />
-    <None Include="resources\shaders\FragmentShader.spv" />
-    <None Include="resources\shaders\VertexShader.spv" />
     <None Include="resources\compile.bat">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="resources\shaders\RayMarching.frag" />
+    <None Include="resources\shaders\spv\FragmentShader.spv" />
+    <None Include="resources\shaders\spv\VertexShader.spv" />
   </ItemGroup>
 </Project>
