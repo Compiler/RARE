@@ -704,6 +704,17 @@ namespace Rare {
 
 	void RareCore::_recreateSwapChain() {
 		
+		/*This code checks for width/height to be 0 (i.e. the window is minimized) and then waits for it to not be minimized*/
+		int currentFrameWidth = 0, currentFrameHeight = 0;
+		glfwGetFramebufferSize(_windowRef, &currentFrameWidth, &currentFrameHeight);
+		while (currentFrameWidth == 0 || currentFrameHeight == 0) {
+			glfwGetFramebufferSize(_windowRef, &currentFrameWidth, &currentFrameHeight);
+			glfwWaitEvents();
+		}
+
+
+
+		/*Being swap chain recreation*/
 		 vkDeviceWaitIdle(_logicalDevice);
 		
 		 _cleanupSwapChain();

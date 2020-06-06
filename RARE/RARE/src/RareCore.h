@@ -156,13 +156,13 @@ namespace Rare {
 			const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 			void* pUserData) {
 			if (messageSeverity > VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-				RARE_FATAL("{}:{}\t{}", __FILENAME__, __LINE__, pCallbackData->pMessage)
+				RARE_FATAL("\nVALIDATION FATAL\n:{}:{}\t{}\n", __FILENAME__, __LINE__, pCallbackData->pMessage)
 			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-				RARE_ERROR("\n{}:{}\t{}\n", __FILENAME__, __LINE__, pCallbackData->pMessage);
+				RARE_ERROR("\nVALIDATION ERROR\n:{}:{}\t{}\n", __FILENAME__, __LINE__, pCallbackData->pMessage);
 			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-				RARE_WARN("{}:{}\t{}", __FILENAME__, __LINE__, pCallbackData->pMessage);
+				RARE_WARN("\nVALIDATION WARN\N:{}:{}\t{}\n", __FILENAME__, __LINE__, pCallbackData->pMessage);
 			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
-				RARE_LOG("{}:{}\t{}", __FILENAME__, __LINE__, pCallbackData->pMessage);
+				RARE_LOG("\nVALIDATION LOG\n:{}:{}\t{}\n", __FILENAME__, __LINE__, pCallbackData->pMessage);
 			return VK_FALSE;
 		}
 		static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
