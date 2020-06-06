@@ -56,10 +56,14 @@ namespace Rare {
 
 	private:
 
+		const float a = 0.75f;
 		const std::vector<VertexData> _vertices = {
-							{{0.0f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-							{{0.5f,  0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-							{{-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}}
+							{{ a, -a, 0.0f}, {0.0, 0.0, 1.0}},
+							{{-a,  a, 0.0f}, {0.0, 1.0, 0.0}},
+							{{-a, -a, 0.0f}, {1.0, 0.0, 0.0}},
+							{{ a,  a, 0.0f}, {1.0, 0.0, 0.0}},
+							{{-a,  a, 0.0f}, {0.0, 1.0, 0.0}},
+							{{ a, -a, 0.0f}, {0.0, 0.0, 1.0}}
 						};
 		
 
@@ -119,6 +123,7 @@ namespace Rare {
 
 		//Vertex Buffer object
 		VkBuffer _vertexBuffer;
+		VkDeviceMemory _vertexBufferMemory;
 
 		void _createVkInstance();
 		void _createSurface();
@@ -140,7 +145,7 @@ namespace Rare {
 		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 		
 
-		uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+		uint32_t _findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
 		bool _checkValidationLayerSupport();

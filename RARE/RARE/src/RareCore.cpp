@@ -130,6 +130,33 @@ namespace Rare {
 		VkMemoryRequirements memRequirements;
 		vkGetBufferMemoryRequirements(_logicalDevice, _vertexBuffer, &memRequirements);
 		RARE_DEBUG("Needs {} bytes for vertex buffer", memRequirements.size);
+
+		VkMemoryAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = _findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		if (vkAllocateMemory(_logicalDevice, &allocInfo, nullptr, &_vertexBufferMemory) != VK_SUCCESS) {
+			RARE_FATAL("failed to allocate vertex buffer memory");
+		}
+		vkBindBufferMemory(_logicalDevice, _vertexBuffer, _vertexBufferMemory, 0);
+
+		void* data;
+		vkMapMemory(_logicalDevice, _vertexBufferMemory, 0, bufferInfo.size, 0, &data);
+		memcpy(data, _vertices.data(), (size_t)bufferInfo.size);
+		vkUnmapMemory(_logicalDevice, _vertexBufferMemory);
+
+	}
+	uint32_t RareCore::_findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+		VkPhysicalDeviceMemoryProperties memProperties;
+		vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memProperties);
+
+		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+			if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+				RARE_DEBUG("Using memory type '{}'", i);
+				return i;
+			}
+		}
+		RARE_FATAL("Couldn't find an applicable memory type");
 	}
 
 	void RareCore::_createVkInstance() {
@@ -393,7 +420,8 @@ namespace Rare {
 	void RareCore::dispose() {
 		_cleanupSwapChain();
 
-
+		vkDestroyBuffer(_logicalDevice, _vertexBuffer, nullptr);
+		vkFreeMemory(_logicalDevice, _vertexBufferMemory, nullptr);
 		vkDestroyBuffer(_logicalDevice, _vertexBuffer, nullptr);
 
 		for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {
@@ -1004,7 +1032,13 @@ namespace Rare {
 
 			vkCmdBeginRenderPass(_commandBuffers[i], &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 			vkCmdBindPipeline(_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline);
-			vkCmdDraw(_commandBuffers[i], 6, 1, 0, 0);
+
+			VkBuffer vertexBuffers[] = { _vertexBuffer };
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindVertexBuffers(_commandBuffers[i], 0, 1, vertexBuffers, offsets);
+
+
+			vkCmdDraw(_commandBuffers[i], static_cast<uint32_t>(_vertices.size()), 1, 0, 0);
 			vkCmdEndRenderPass(_commandBuffers[i]);
 
 			if (vkEndCommandBuffer(_commandBuffers[i]) != VK_SUCCESS) {
