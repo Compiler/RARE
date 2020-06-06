@@ -658,9 +658,9 @@ namespace Rare {
 		/*
 		-Shader modules that define the functionality of the programmable stages of the graphics pipeline
 		*/
-		auto vertexShaderCode = ShaderCompilation::CompileShaderSource("src/shaders/VertexShader.vert", ShaderCompilation::RARE_SHADER_TYPE::VERTEX);
-		auto fragmentShaderCode = ShaderCompilation::CompileShaderSource("src/shaders/FragmentShader.frag", ShaderCompilation::RARE_SHADER_TYPE::FRAGMENT);
-		auto vertexShaderCode1 = ShaderCompilation::ReadShaderSPV("src/shaders/VertexShader.spv");
+		auto vertexShaderCode = ShaderCompilation::CompileShaderSource(RARE_INTERNAL("shaders/VertexShader.vert"), ShaderCompilation::RARE_SHADER_TYPE::VERTEX);
+		auto fragmentShaderCode = ShaderCompilation::CompileShaderSource(RARE_INTERNAL_SHADER("FragmentShader.frag"), ShaderCompilation::RARE_SHADER_TYPE::FRAGMENT);
+		//auto vertexShaderCode1 = ShaderCompilation::ReadShaderSPV("src/shaders/VertexShader.spv");
 		//auto fragmentShaderCode = ShaderCompilation::ReadShaderSPV("src/shaders/FragmentShader.spv");
 		VkShaderModule vShaderMod = _createShaderModule(vertexShaderCode);
 		VkShaderModule fShaderMod = _createShaderModule(fragmentShaderCode);//note: these arent needed after pipeline creation, so they are not class members
@@ -833,10 +833,8 @@ namespace Rare {
 	void RareCore::_createFramebuffers() {
 		_swapChainFramebuffers.resize(_swapChainImageViews.size());
 		for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
-			VkImageView attachments[] = {
-				_swapChainImageViews[i]
-			};
-
+			VkImageView attachments[] = { _swapChainImageViews[i] };
+			
 			VkFramebufferCreateInfo framebufferInfo{};
 			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			framebufferInfo.renderPass = _renderPass;
@@ -846,9 +844,9 @@ namespace Rare {
 			framebufferInfo.height = _swapChainExtent.height;
 			framebufferInfo.layers = 1;
 
-			if (vkCreateFramebuffer(_logicalDevice, &framebufferInfo, nullptr, &_swapChainFramebuffers[i]) != VK_SUCCESS) {
+			if (vkCreateFramebuffer(_logicalDevice, &framebufferInfo, nullptr, &_swapChainFramebuffers[i]) != VK_SUCCESS) 
 				RARE_FATAL("Couldn't create framebuffer");
-			}
+			
 		}
 	}
 

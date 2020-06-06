@@ -6,6 +6,8 @@
 #include <tools/Logger.h>
 
 #include <shaderc/shaderc.hpp>
+#define RARE_INTERNAL(x) "resources/" x
+#define RARE_INTERNAL_SHADER(x) RARE_INTERNAL("shaders/") x
 
 namespace Rare {
 	namespace ShaderCompilation {
@@ -15,8 +17,8 @@ namespace Rare {
 		};
 		
 		static std::vector<uint32_t> compile(const std::string& srcName, shaderc_shader_kind kind, const std::vector<char>& src, bool optimize = false) {
-			shaderc::Compiler shader_compiler;
-			shaderc::CompileOptions shader_compiler_options;
+			static shaderc::Compiler shader_compiler;
+			static shaderc::CompileOptions shader_compiler_options;
 
 			if (optimize) {
 				shader_compiler_options.SetOptimizationLevel(shaderc_optimization_level_performance);
@@ -29,9 +31,9 @@ namespace Rare {
 				RARE_FATAL("Could not compile shader: {} : {}", srcName.c_str(), module.GetCompilationStatus());
 				return std::vector<uint32_t>();
 			}
-			std::vector<uint32_t> thing = { module.begin(), module.end() };
-			thing.resize(thing.size() * (sizeof(uint32_t) / sizeof(char)), 0);
-			return thing;
+			std::vector<uint32_t> result = { module.begin(), module.end() };
+			result.resize(result.size() * (sizeof(uint32_t) / sizeof(char)), 0);
+			return result;
 		}
 
 		static std::vector<uint32_t> ReadShaderSPV(const std::string& filename) {

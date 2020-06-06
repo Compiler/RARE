@@ -95,17 +95,22 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\PhysicalDevices\GPUDevice.cpp" />
     <ClCompile Include="src\RareCore.cpp" />
-    <ClCompile Include="src\tools\Logger.cpp" />
+    <ClCompile Include="src\Tools\Logger.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\PhysicalDevices\GPUDevice.h" />
     <ClInclude Include="src\RareCore.h" />
-    <ClInclude Include="src\shaders\ShaderCompilation.h" />
-    <ClInclude Include="src\tools\Logger.h" />
+    <ClInclude Include="src\Rendering\FileTypes\ShaderCompilation.h" />
+    <ClInclude Include="src\Tools\Logger.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\shaders\FragmentShader.frag" />
-    <None Include="src\shaders\VertexShader.vert" />
+    <None Include="resources\compile.bat" />
+    <None Include="resources\shaders\FragmentShader.frag" />
+    <None Include="resources\shaders\FragmentShader.spv" />
+    <None Include="resources\shaders\VertexShader.spv" />
+    <None Include="resources\shaders\VertexShader.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

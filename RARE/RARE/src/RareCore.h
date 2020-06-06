@@ -3,7 +3,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-#include <tools/Logger.h>
+#include <Tools/Logger.h>
 #include <map>
 #include <optional>
 #include <set>
@@ -11,7 +11,11 @@
 #include <algorithm>
 #include <fstream>
 #include <string>
-#include <shaders/ShaderCompilation.h>
+#include <Rendering/FileTypes/ShaderCompilation.h>
+
+
+#define RARE_INTERNAL(x) "resources/" x
+#define RARE_INTERNAL_SHADER(x) RARE_INTERNAL("shaders/") x
 
 namespace Rare {
 	struct SwapChainSupportDetails {
@@ -143,7 +147,7 @@ namespace Rare {
 			const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 			void* pUserData) {
 			if (messageSeverity > VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-				RARE_FATAL("{}:{}\t{}", __FILENAME__, __LINE__, pCallbackData->pMessage);
+				RARE_FATAL("{}:{}\t{}", __FILENAME__, __LINE__, pCallbackData->pMessage)
 			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 				RARE_ERROR("{}:{}\t{}", __FILENAME__, __LINE__, pCallbackData->pMessage);
 			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
