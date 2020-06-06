@@ -230,9 +230,8 @@ vec3 phongIllumination(vec3 k_a, vec3 k_d, vec3 k_s, float alpha, vec3 p, vec3 e
 
 vec2 iResolution = vec2(640, 480);
 void main(){
-
     vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy)/iResolution.y;
-    //uv.y *= 1.0 - uv.y;
+    uv.y = -uv.y;
 	vec3 resultingColor = vec3(0);
     
     Ray cameraRay;
@@ -243,15 +242,11 @@ void main(){
     RayHit rayMarch = rayMarch(cameraRay);
     
     vec3 point = cameraRay.origin + (cameraRay.direction * rayMarch.dist);
-    vec3 K_a = vec3(0.05);
+    vec3 K_a = vec3(0.005);
     vec3 K_s = vec3(1., .1, .1);
     float shininess = 3.;
     
     vec3 color = phongIllumination(K_a, rayMarch.color, K_s, shininess, point, cameraRay.origin);
-    float diffuse = getLight(point);
-    
-    resultingColor = vec3(diffuse);
-   // resultingColor = getNormal(point); //for visualizing normals
-    outColor = vec4(resultingColor,1.0);
-    //outColor = vec4(fragColor, 1.);
+    //resultingColor = getNormal(point); //for visualizing normals
+    outColor =  vec4(color,1.0);
 }

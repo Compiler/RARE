@@ -281,12 +281,22 @@ namespace Rare {
 	void RareCore::update() {
 		static double start = glfwGetTime();
 		static double delta;
-		glfwPollEvents();//assign this to a daemon thread and lock event manager to synch assignments
+		//glfwPollEvents();//assign this to a daemon thread and lock event manager to synch assignments
 		_coreShouldClose = (delta = glfwGetTime() - start) >= 15 ? true : false;
 
 	}
 
 	void RareCore::render() {
+		static int count = 0;
+		static double start = glfwGetTime();
+		static double delta;
+		count++;
+		delta = glfwGetTime() - start;
+		if (delta >= 1) {
+			RARE_WARN("FPS: {}\t{}", count, delta);
+			count = 0; start = glfwGetTime();
+			delta = 0;
+		}
 		vkWaitForFences(_logicalDevice, 1, &_f_inFlight[_currentFrame], VK_TRUE, UINT64_MAX);
 		
 
@@ -896,7 +906,7 @@ namespace Rare {
 
 			vkCmdBeginRenderPass(_commandBuffers[i], &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 			vkCmdBindPipeline(_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline);
-			vkCmdDraw(_commandBuffers[i], 3, 1, 0, 0);
+			vkCmdDraw(_commandBuffers[i], 6, 1, 0, 0);
 			vkCmdEndRenderPass(_commandBuffers[i]);
 
 			if (vkEndCommandBuffer(_commandBuffers[i]) != VK_SUCCESS) {
