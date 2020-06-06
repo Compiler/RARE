@@ -95,6 +95,12 @@ namespace Rare {
 		_createCommandPool();
 		RARE_LOG("Create Command Pool:\t\t Initialization complete\n");
 
+
+		//begin creating vertex buffers
+		RARE_LOG("Create Vertex Buffer:\t\t Begin init");
+		_createVertexBuffer();
+		RARE_LOG("Create Vertex Buffer:\t\t Initialization complete\n");
+
 		//begin creating command buffers
 		RARE_LOG("Create Command Buffers:\t Begin init");
 		_createCommandBuffers();
@@ -107,6 +113,23 @@ namespace Rare {
 		
 
 		RARE_LOG("Initialization complete");
+	}
+
+	void RareCore::_createVertexBuffer() {
+		VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = sizeof(_vertices[0]) * _vertices.size();
+		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		bufferInfo.flags = 0;
+		if (vkCreateBuffer(_logicalDevice, &bufferInfo, nullptr, &_vertexBuffer) != VK_SUCCESS) {
+			RARE_FATAL("failed to create vertex buffer");
+		}
+
+
+		VkMemoryRequirements memRequirements;
+		vkGetBufferMemoryRequirements(_logicalDevice, _vertexBuffer, &memRequirements);
+		RARE_DEBUG("Needs {} bytes for vertex buffer", memRequirements.size);
 	}
 
 	void RareCore::_createVkInstance() {
@@ -369,6 +392,9 @@ namespace Rare {
 
 	void RareCore::dispose() {
 		_cleanupSwapChain();
+
+
+		vkDestroyBuffer(_logicalDevice, _vertexBuffer, nullptr);
 
 		for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {
 			vkDestroySemaphore(_logicalDevice, _s_imageAvailable[i], nullptr);

@@ -117,6 +117,8 @@ namespace Rare {
 		//Fences (denoted with a f_)
 		std::vector<VkFence> _f_inFlight, _f_imagesInFlight;
 
+		//Vertex Buffer object
+		VkBuffer _vertexBuffer;
 
 		void _createVkInstance();
 		void _createSurface();
@@ -133,9 +135,13 @@ namespace Rare {
 		void _setupDebugMessenger();
 		void _recreateSwapChain();
 		void _cleanupSwapChain();
+		void _createVertexBuffer();
 		
 		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 		
+
+		uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
 		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
 		bool _checkValidationLayerSupport();
 		QueueFamilyIndices _findQueueFamilies(VkPhysicalDevice device);
