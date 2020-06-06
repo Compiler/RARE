@@ -18,7 +18,18 @@ namespace Rare {
 		: _windowRefName(windowName), _validationLayers(validationLayers){ _coreShouldClose = false; }
 
 	void RareCore::init() {
-
+		{
+			std::unordered_map<uint32_t, std::string> map = { {0b00001, "bit 1"},{0b00010, "bit 2"},{0b00011, "bit 3"},{0b00100, "bit 4"},{0b00101, "bit 5"},{0b00110, "bit 6"},{0b00111, "bit 7"},{0b01000, "bit 8"}};
+			uint32_t flags = 0b00001 | 0b00010 | 0b01011;
+			uint32_t runningFlag = flags;
+			while (flags != 0) {
+				RARE_LOG("Flag: {}", flags);
+				if (flags % 2 == 0) {
+					runningFlag <= 1;
+				} else runningFlag ^= 1;
+				flags -= 1;
+			}
+		}
 		//begin logger initialization
 		Rare::Logger::init();
 		
@@ -354,8 +365,10 @@ namespace Rare {
 		frameCount++;
 		deltaFPS = glfwGetTime() - startFPS;
 		if (deltaFPS >= 1) {
-			RARE_WARN("FPS: {}", frameCount);
-			RARE_WARN("MS: {}", deltaMS);
+			if (FPS_COUNTER_LOGGED) {
+				RARE_WARN("FPS: {}", frameCount);
+				RARE_WARN("MS: {}", deltaMS);
+			}
 			frameCount = 0; startFPS = glfwGetTime();
 			deltaFPS = 0;
 		}

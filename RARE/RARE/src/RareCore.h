@@ -17,7 +17,7 @@
 
 #define RARE_INTERNAL(x) "resources/" x
 #define RARE_INTERNAL_SHADER(x) RARE_INTERNAL("shaders/") x
-
+#define FPS_COUNTER_LOGGED 0
 namespace Rare {
 	struct SwapChainSupportDetails {
 		VkSurfaceCapabilitiesKHR capabilities;
