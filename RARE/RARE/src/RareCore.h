@@ -65,7 +65,7 @@ namespace Rare {
 
 	private:
 
-		static constexpr float a = 0.75f;
+		static constexpr float a = 2.75f;
 		const std::vector<VertexData> _vertices = {
 							{{ a, -a, 0.0f}, {0.0, 0.0, 1.0}},	//0
 							{{-a,  a, 0.0f}, {0.0, 1.0, 0.0}},	//1
@@ -138,8 +138,11 @@ namespace Rare {
 		VkBuffer _indexBuffer;
 		VkDeviceMemory _indexBufferMemory;
 
+		//ubo data
 		std::vector<VkBuffer> _uniformBuffers;
 		std::vector<VkDeviceMemory> _uniformBuffersMemory;
+		VkDescriptorPool _descriptorPool;
+		std::vector<VkDescriptorSet> _descriptorSets;
 
 
 		void _createVkInstance();
@@ -161,6 +164,8 @@ namespace Rare {
 		void _createIndexBuffer();
 		void _createDescriptorSetLayout();
 		void _createUniformBuffers();
+		void _createDescriptorPool();
+		void _createDescriptorSets();
 		void _createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 		void _copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
 

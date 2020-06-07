@@ -48,98 +48,136 @@ namespace Rare {
 		glfwMakeContextCurrent(_windowRef);
 		RARE_LOG("GLFW:\t\t\t\t Initialization complete\n");
 
-		//begin vk initialization
 		RARE_LOG("Vulkan:\t\t\t Begin init");
 		_createVkInstance();
 		RARE_LOG("Vulkan:\t\t\t Initialization complete\n");
 
-		//begin vk validation layers initialization
 		RARE_LOG("Validation Layers:\t\t Begin init");
 		_setupDebugMessenger();
 		RARE_LOG("Validation Layers:\t\t Initialization complete\n");
 
-
-		//begin creating surface device
 		RARE_LOG("Create Surface:\t\t Begin init");
 		_createSurface();
 		RARE_LOG("Create Surface:\t\t Initialization complete\n");
 
-		//begin picking physical device
 		RARE_LOG("Pick Physical Device:\t\t Begin init");
 		_pickPhysicalDevice();
 		RARE_LOG("Pick Physical Device:\t\t Initialization complete\n");
 
-
-		//begin creating logical device
 		RARE_LOG("Create Logical Device:\t\t Begin init");
 		_createLogicalDevice();
 		RARE_LOG("Create Logical Device:\t\t Initialization complete\n");
 
-		//begin creating swap chain
 		RARE_LOG("Create Swap Chain:\t\t Begin init");
 		_createSwapChain();
 		RARE_LOG("Create Swap Chain:\t\t Initialization complete\n");
 
-
-		//begin creating image views
 		RARE_LOG("Create Image Views:\t\t Begin init");
 		_createImageViews();
 		RARE_LOG("Create Image Views:\t\t Initialization complete\n");
 
-		//begin creating render pass
 		RARE_LOG("Create Render Pass:\t\t Begin init");
 		_createRenderPass();
 		RARE_LOG("Create Render Pass:\t\t Initialization complete\n");
 
-
-		//begin creating descriptor set layout
 		RARE_LOG("Create Descriptor Set Layout:\t Begin init");
 		_createDescriptorSetLayout();
 		RARE_LOG("Create Descriptor Set Layout:\t Initialization complete\n");
 
-		//begin creating graphics pipeline
 		RARE_LOG("Create Graphics Pipeline:\t Begin init");
 		_createGraphicsPipeline();
 		RARE_LOG("Create Graphics Pipeline:\t Initialization complete\n");
 
-		//begin creating framebuffers
 		RARE_LOG("Create Framebuffers:\t\t Begin init");
 		_createFramebuffers();
 		RARE_LOG("Create Framebuffers:\t\t Initialization complete\n");
 
-		//begin creating command pool
 		RARE_LOG("Create Command Pool:\t\t Begin init");
 		_createCommandPool();
 		RARE_LOG("Create Command Pool:\t\t Initialization complete\n");
 
-
-		//begin creating vertex buffers
 		RARE_LOG("Create Vertex Buffer:\t\t Begin init");
 		_createVertexBuffer();
 		RARE_LOG("Create Vertex Buffer:\t\t Initialization complete\n");
 
-		//begin creating index buffers
 		RARE_LOG("Create Index Buffer:\t\t Begin init");
 		_createIndexBuffer();
 		RARE_LOG("Create Index Buffer:\t\t Initialization complete\n");
 		
-		//begin creating uniform buffers
 		RARE_LOG("Create Uniform Buffer:\t\t Begin init");
 		_createUniformBuffers();
 		RARE_LOG("Create Uniform Buffer:\t\t Initialization complete\n");
 
-		//begin creating command buffers
+		RARE_LOG("Create Descriptor Pool:\t\t Begin init");
+		_createDescriptorPool();
+		RARE_LOG("Create Descriptor Pool:\t\t Initialization complete\n");
+
+		RARE_LOG("Create Descriptor Sets:\t\t Begin init");
+		_createDescriptorSets();
+		RARE_LOG("Create Descriptor Sets:\t\t Initialization complete\n");
+
 		RARE_LOG("Create Command Buffers:\t Begin init");
 		_createCommandBuffers();
 		RARE_LOG("Create Command Buffers:\t Initialization complete\n");
 
-		//begin creating semaphores
 		RARE_LOG("Create Synchronization Objects: Begin init");
 		_createSynchronizationObjects();
 		RARE_LOG("Create Synchronization Objects: Initialization complete\n");
 		
 
 		RARE_LOG("Initialization complete");
+	}
+
+	void RareCore::_createDescriptorSets() {
+		std::vector<VkDescriptorSetLayout> layouts(_swapChainImages.size(), _descriptorSetLayout);
+		VkDescriptorSetAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = _descriptorPool;
+		allocInfo.descriptorSetCount = static_cast<uint32_t>(_swapChainImages.size());
+		allocInfo.pSetLayouts = layouts.data();
+
+		_descriptorSets.resize(_swapChainImages.size());
+		if (vkAllocateDescriptorSets(_logicalDevice, &allocInfo, _descriptorSets.data()) != VK_SUCCESS) {
+			RARE_FATAL("Failed to allocate descriptor sets");
+		}
+
+
+		for (size_t i = 0; i < _swapChainImages.size(); i++) {
+			VkDescriptorBufferInfo bufferInfo{};
+			bufferInfo.buffer = _uniformBuffers[i];
+			bufferInfo.offset = 0;
+			bufferInfo.range = sizeof(UniformBufferObject);
+
+			VkWriteDescriptorSet descriptorWrite{};
+			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = _descriptorSets[i];
+			descriptorWrite.dstBinding = 0;
+			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pBufferInfo = &bufferInfo;
+			descriptorWrite.pImageInfo = nullptr;
+			descriptorWrite.pTexelBufferView = nullptr;
+
+			vkUpdateDescriptorSets(_logicalDevice, 1, &descriptorWrite, 0, nullptr);
+		}
+
+		
+	}
+
+	void RareCore::_createDescriptorPool() {
+		VkDescriptorPoolSize poolSize{};
+		poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSize.descriptorCount = static_cast<uint32_t>(_swapChainImages.size());
+
+		VkDescriptorPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.poolSizeCount = 1;
+		poolInfo.pPoolSizes = &poolSize;
+		poolInfo.maxSets = static_cast<uint32_t>(_swapChainImages.size());
+		if (vkCreateDescriptorPool(_logicalDevice, &poolInfo, nullptr, &_descriptorPool) != VK_SUCCESS) {
+			RARE_FATAL("Failed to create descriptor pool");
+		}
 	}
 
 	/*A better way than sending ubos is to use push constants in a small buffer*/
@@ -149,7 +187,7 @@ namespace Rare {
 		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		ubo.proj = glm::perspective(glm::radians(45.0f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 10.0f);
-		ubo.proj[1][1] *= -1;
+		//ubo.proj[1][1] *= -1;
 		ubo.time = time;
 
 		void* data;
@@ -177,7 +215,7 @@ namespace Rare {
 		uboLayoutBinding.binding = 0; 
 		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		uboLayoutBinding.descriptorCount = 1;
-		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT /*| VK_SHADER_STAGE_FRAGMENT_BIT*/;
+		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 		uboLayoutBinding.pImmutableSamplers = nullptr;
 
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -928,6 +966,8 @@ namespace Rare {
 			vkFreeMemory(_logicalDevice, _uniformBuffersMemory[i], nullptr);
 		}
 
+		vkDestroyDescriptorPool(_logicalDevice, _descriptorPool, nullptr);
+
 		RARE_LOG("Ended cleaning of swap chain");
 
 	}
@@ -955,6 +995,8 @@ namespace Rare {
 		 _createGraphicsPipeline();
 		 _createFramebuffers();
 		 _createUniformBuffers();
+		 _createDescriptorPool();
+		 _createDescriptorSets();
 		 _createCommandBuffers();
 
 
@@ -967,7 +1009,7 @@ namespace Rare {
 		-Shader modules that define the functionality of the programmable stages of the graphics pipeline
 		*/
 		auto vertexShaderCode = ShaderCompilation::CompileShaderSource(RARE_INTERNAL_SHADER("VertexShader.vert"), ShaderCompilation::RARE_SHADER_TYPE::VERTEX);
-		auto fragmentShaderCode = ShaderCompilation::CompileShaderSource(RARE_INTERNAL_SHADER("FragmentShader.frag"/*"RayMarching.frag"*/), ShaderCompilation::RARE_SHADER_TYPE::FRAGMENT);
+		auto fragmentShaderCode = ShaderCompilation::CompileShaderSource(RARE_INTERNAL_SHADER("RayMarching.frag"/*"FragmentShader.frag"*/), ShaderCompilation::RARE_SHADER_TYPE::FRAGMENT);
 		//auto vertexShaderCode1 = ShaderCompilation::ReadShaderSPV("src/shaders/VertexShader.spv");
 		//auto fragmentShaderCode = ShaderCompilation::ReadShaderSPV("src/shaders/FragmentShader.spv");
 		VkShaderModule vShaderMod = _createShaderModule(vertexShaderCode);
@@ -1216,6 +1258,7 @@ namespace Rare {
 
 			vkCmdBindIndexBuffer(_commandBuffers[i], _indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
+			vkCmdBindDescriptorSets(_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &_descriptorSets[i], 0, nullptr);
 
 			vkCmdDrawIndexed(_commandBuffers[i], static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
 			vkCmdEndRenderPass(_commandBuffers[i]);

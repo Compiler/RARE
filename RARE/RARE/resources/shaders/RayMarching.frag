@@ -3,12 +3,13 @@
 
 layout(location = 0) in vec3 fragColor;
 layout(location = 0) out vec4 outColor;
-//
-//void main(){
-//
-//	outColor = vec4(fragColor, 1.0);
-//
-//}
+
+layout(binding = 0) uniform UniformBufferObject {
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+    float time;
+} ubo;
 
 struct Ray{
 	vec3 origin;
@@ -44,7 +45,7 @@ Ray getRay(vec2 uv, vec3 cameraPosition, vec3 lookAt, float zoom){
 #define SURFACE_HIT_DISTANCE 0.004
 #define MAX_DISTANCE_MARCHABLE 1024.
 
-float iTime = 1.0f;
+float iTime = ubo.time;
 
 float sdInter(float distA, float distB) {
     return max(distA, distB);
