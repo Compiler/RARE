@@ -2,7 +2,9 @@
 #include <vulkan/vulkan.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <Tools/Logger.h>
 #include <map>
 #include <optional>
@@ -83,7 +85,7 @@ namespace Rare {
 
 		struct QueueFamilyIndices;
 		bool _coreShouldClose;
-
+		float deltaTime;
 		//TODO: Abstract 'window' into its own class
 		GLFWwindow* _windowRef;
 		const char* _windowRefName;
@@ -136,6 +138,10 @@ namespace Rare {
 		VkBuffer _indexBuffer;
 		VkDeviceMemory _indexBufferMemory;
 
+		std::vector<VkBuffer> _uniformBuffers;
+		std::vector<VkDeviceMemory> _uniformBuffersMemory;
+
+
 		void _createVkInstance();
 		void _createSurface();
 		void _createLogicalDevice();
@@ -154,10 +160,11 @@ namespace Rare {
 		void _createVertexBuffer();
 		void _createIndexBuffer();
 		void _createDescriptorSetLayout();
+		void _createUniformBuffers();
 		void _createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 		void _copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
 
-
+		void _updateUniformBuffer(uint32_t imageIndex);
 		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 		
 

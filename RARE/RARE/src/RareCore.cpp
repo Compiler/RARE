@@ -122,6 +122,11 @@ namespace Rare {
 		RARE_LOG("Create Index Buffer:\t\t Begin init");
 		_createIndexBuffer();
 		RARE_LOG("Create Index Buffer:\t\t Initialization complete\n");
+		
+		//begin creating uniform buffers
+		RARE_LOG("Create Uniform Buffer:\t\t Begin init");
+		_createUniformBuffers();
+		RARE_LOG("Create Uniform Buffer:\t\t Initialization complete\n");
 
 		//begin creating command buffers
 		RARE_LOG("Create Command Buffers:\t Begin init");
@@ -137,6 +142,35 @@ namespace Rare {
 		RARE_LOG("Initialization complete");
 	}
 
+	/*A better way than sending ubos is to use push constants in a small buffer*/
+	void RareCore::_updateUniformBuffer(uint32_t imageIndex) {
+		float time = glfwGetTime();
+		UniformBufferObject ubo{};
+		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.proj = glm::perspective(glm::radians(45.0f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 10.0f);
+		ubo.proj[1][1] *= -1;
+		ubo.time = time;
+
+		void* data;
+		vkMapMemory(_logicalDevice, _uniformBuffersMemory[imageIndex], 0, sizeof(ubo), 0, &data);
+		memcpy(data, &ubo, sizeof(ubo));
+		vkUnmapMemory(_logicalDevice, _uniformBuffersMemory[imageIndex]); 
+
+
+	}
+
+	void RareCore::_createUniformBuffers() {
+		VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+
+		//ubo per swap chain image
+		_uniformBuffers.resize(_swapChainImages.size());
+		_uniformBuffersMemory.resize(_swapChainImages.size());
+
+		for (size_t i = 0; i < _swapChainImages.size(); i++) {
+			_createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, _uniformBuffers[i], _uniformBuffersMemory[i]);
+		}
+	}
 
 	void RareCore::_createDescriptorSetLayout() {
 		VkDescriptorSetLayoutBinding uboLayoutBinding{};
@@ -509,6 +543,8 @@ namespace Rare {
 		//mark image as being used by current frame
 		_f_imagesInFlight[imageIndex] = _f_inFlight[_currentFrame];
 
+		_updateUniformBuffer(imageIndex);
+
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		VkSemaphore s_wait[] = { _s_imageAvailable[_currentFrame] };
@@ -550,6 +586,9 @@ namespace Rare {
 
 	void RareCore::dispose() {
 		_cleanupSwapChain();
+
+
+		vkDestroyDescriptorSetLayout(_logicalDevice, _descriptorSetLayout, nullptr);
 
 		vkDestroyBuffer(_logicalDevice, _indexBuffer, nullptr);
 		vkFreeMemory(_logicalDevice, _indexBufferMemory, nullptr);
@@ -884,6 +923,11 @@ namespace Rare {
 		}
 		vkDestroySwapchainKHR(_logicalDevice, _swapChain, nullptr);
 
+		for (size_t i = 0; i < _swapChainImages.size(); i++) {
+			vkDestroyBuffer(_logicalDevice, _uniformBuffers[i], nullptr);
+			vkFreeMemory(_logicalDevice, _uniformBuffersMemory[i], nullptr);
+		}
+
 		RARE_LOG("Ended cleaning of swap chain");
 
 	}
@@ -910,6 +954,7 @@ namespace Rare {
 		 _createRenderPass(); //depends on format of swap chain images
 		 _createGraphicsPipeline();
 		 _createFramebuffers();
+		 _createUniformBuffers();
 		 _createCommandBuffers();
 
 
@@ -1046,8 +1091,8 @@ namespace Rare {
 		//Pipeline layout
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 0;
-		pipelineLayoutInfo.pSetLayouts = nullptr;
+		pipelineLayoutInfo.setLayoutCount = 1;
+		pipelineLayoutInfo.pSetLayouts = &_descriptorSetLayout;
 		pipelineLayoutInfo.pushConstantRangeCount = 0;
 		pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
