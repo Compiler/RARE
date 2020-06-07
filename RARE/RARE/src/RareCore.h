@@ -55,11 +55,11 @@ namespace Rare {
 		}
 	};
 
-	struct UniformBufferObject {
-		glm::mat4 model;
+	struct  UniformBufferObject {
+		alignas(16) float time;
+		alignas(16) glm::mat4 model;
 		glm::mat4 view;
 		glm::mat4 proj;
-		float time;
 	};
 	class RareCore {
 

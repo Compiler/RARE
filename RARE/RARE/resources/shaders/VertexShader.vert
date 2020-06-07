@@ -3,10 +3,10 @@
 
 
 layout(binding = 0) uniform UniformBufferObject {
+    float time;
     mat4 model;
     mat4 view;
     mat4 proj;
-    float time;
 } ubo;
 
 
