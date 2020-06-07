@@ -542,6 +542,7 @@ namespace Rare {
 		static double delta;
 		glfwPollEvents();//assign this to a daemon thread and lock event manager to synch assignments
 		//_coreShouldClose = (delta = glfwGetTime() - start) >= 44 ? true : false;
+		_coreShouldClose = glfwWindowShouldClose(_windowRef);
 		if (InputManager::isKeyPressed(Rare::KeyCodes::KEY_A)) RARE_LOG("A Pressed");
 
 

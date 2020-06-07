@@ -5,7 +5,7 @@
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <Tools/Logger.h>
+#include <Tools/Logging/Logger.h>
 #include <map>
 #include <optional>
 #include <set>

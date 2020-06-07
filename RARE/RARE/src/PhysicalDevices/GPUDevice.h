@@ -2,7 +2,7 @@
 #include <vulkan/vulkan.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include <Tools/Logger.h>
+#include <Tools/Logging/Logger.h>
 #include <vector>
 #include <algorithm>
 #include <set>

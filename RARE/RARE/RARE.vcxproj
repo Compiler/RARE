@@ -99,7 +99,7 @@
     <ClCompile Include="src\PhysicalDevices\GPUDevice.cpp" />
     <ClCompile Include="src\RareCore.cpp" />
     <ClCompile Include="src\Tools\Input\InputManager.cpp" />
-    <ClCompile Include="src\Tools\Logger.cpp" />
+    <ClCompile Include="src\Tools\Logging\Logger.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\PhysicalDevices\DeviceOptions.h" />
@@ -109,7 +109,7 @@
     <ClInclude Include="src\Rendering\FileTypes\ShaderCompilation.h" />
     <ClInclude Include="src\Tools\Input\InputManager.h" />
     <ClInclude Include="src\Tools\Input\RareInput.h" />
-    <ClInclude Include="src\Tools\Logger.h" />
+    <ClInclude Include="src\Tools\Logging\Logger.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\compile.bat" />

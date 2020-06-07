@@ -3,7 +3,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#include <tools/Logger.h>
+#include <tools/Logging/Logger.h>
 
 #include <shaderc/shaderc.hpp>
 #define RARE_INTERNAL(x) "resources/" x
