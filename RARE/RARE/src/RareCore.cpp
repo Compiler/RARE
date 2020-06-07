@@ -91,6 +91,12 @@ namespace Rare {
 		_createRenderPass();
 		RARE_LOG("Create Render Pass:\t\t Initialization complete\n");
 
+
+		//begin creating descriptor set layout
+		RARE_LOG("Create Descriptor Set Layout:\t Begin init");
+		_createDescriptorSetLayout();
+		RARE_LOG("Create Descriptor Set Layout:\t Initialization complete\n");
+
 		//begin creating graphics pipeline
 		RARE_LOG("Create Graphics Pipeline:\t Begin init");
 		_createGraphicsPipeline();
@@ -112,7 +118,7 @@ namespace Rare {
 		_createVertexBuffer();
 		RARE_LOG("Create Vertex Buffer:\t\t Initialization complete\n");
 
-		//begin creating vertex buffers
+		//begin creating index buffers
 		RARE_LOG("Create Index Buffer:\t\t Begin init");
 		_createIndexBuffer();
 		RARE_LOG("Create Index Buffer:\t\t Initialization complete\n");
@@ -129,6 +135,28 @@ namespace Rare {
 		
 
 		RARE_LOG("Initialization complete");
+	}
+
+
+	void RareCore::_createDescriptorSetLayout() {
+		VkDescriptorSetLayoutBinding uboLayoutBinding{};
+		uboLayoutBinding.binding = 0; 
+		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboLayoutBinding.descriptorCount = 1;
+		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT /*| VK_SHADER_STAGE_FRAGMENT_BIT*/;
+		uboLayoutBinding.pImmutableSamplers = nullptr;
+
+		VkDescriptorSetLayoutCreateInfo layoutInfo{};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = 1;
+		layoutInfo.pBindings = &uboLayoutBinding;
+
+		if (vkCreateDescriptorSetLayout(_logicalDevice, &layoutInfo, nullptr, &_descriptorSetLayout) != VK_SUCCESS) {
+			RARE_FATAL("failed to create descriptor set layout");
+		}
+
+
+
 	}
 
 	void RareCore::_createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {

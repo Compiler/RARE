@@ -52,6 +52,13 @@ namespace Rare {
 			return attributeDescriptions;
 		}
 	};
+
+	struct UniformBufferObject {
+		glm::mat4 model;
+		glm::mat4 view;
+		glm::mat4 proj;
+		float time;
+	};
 	class RareCore {
 
 	private:
@@ -107,6 +114,7 @@ namespace Rare {
 		//graphics pipeline
 		VkPipeline _graphicsPipeline;
 		VkRenderPass _renderPass;
+		VkDescriptorSetLayout _descriptorSetLayout;
 		VkPipelineLayout _pipelineLayout;
 
 		//frame buffer
@@ -145,6 +153,7 @@ namespace Rare {
 		void _cleanupSwapChain();
 		void _createVertexBuffer();
 		void _createIndexBuffer();
+		void _createDescriptorSetLayout();
 		void _createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 		void _copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
 
