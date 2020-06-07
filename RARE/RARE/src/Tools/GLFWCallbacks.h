@@ -1,6 +1,7 @@
 #pragma once
 #include <GLFW/glfw3.h>
 #include <RareCore.h>
+#include <Tools/Input/InputManager.h>
 class GLFWCallbacks {
 
 public:
@@ -8,5 +9,7 @@ public:
 	GLFWCallbacks(const GLFWCallbacks&) = delete;
 
 	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
+	static void mouseClickCallback(GLFWwindow* window, int button, int action, int mods);
+	static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
 };
 

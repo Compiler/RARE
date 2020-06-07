@@ -41,7 +41,12 @@ namespace Rare {
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 		_windowRef = glfwCreateWindow(_WIDTH, _HEIGHT, _windowRefName, NULL, NULL);
+
 		glfwSetFramebufferSizeCallback(_windowRef, GLFWCallbacks::framebufferResizeCallback);
+		glfwSetKeyCallback(_windowRef, GLFWCallbacks::keyCallback);
+		//glfwSetCursorPosCallback(_windowRef, GLFWCallbacks);
+		glfwSetMouseButtonCallback(_windowRef, GLFWCallbacks::mouseClickCallback);
+		
 		glfwSetWindowUserPointer(_windowRef, this);
 
 		glfwSetWindowPos(_windowRef, _WIDTH * 2, _HEIGHT);
@@ -537,7 +542,10 @@ namespace Rare {
 		static double delta;
 		glfwPollEvents();//assign this to a daemon thread and lock event manager to synch assignments
 		//_coreShouldClose = (delta = glfwGetTime() - start) >= 44 ? true : false;
+		if (InputManager::isKeyPressed(Rare::KeyCodes::KEY_A)) RARE_LOG("A Pressed");
 
+
+		InputManager::clear();
 	}
 
 	void RareCore::render() {
