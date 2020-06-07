@@ -56,15 +56,16 @@ namespace Rare {
 
 	private:
 
-		
+		static constexpr float a = 0.75f;
 		const std::vector<VertexData> _vertices = {
-							{{ 1.0f, -1.0f, 0.0f}, {0.0, 0.0, 1.0}},
-							{{-1.0f,  1.0f, 0.0f}, {0.0, 1.0, 0.0}},
-							{{-1.0f, -1.0f, 0.0f}, {1.0, 0.0, 0.0}},
-							{{ 1.0f,  1.0f, 0.0f}, {1.0, 0.0, 0.0}},
-							{{-1.0f,  1.0f, 0.0f}, {0.0, 1.0, 0.0}},
-							{{ 1.0f, -1.0f, 0.0f}, {0.0, 0.0, 1.0}}
+							{{ a, -a, 0.0f}, {0.0, 0.0, 1.0}},	//0
+							{{-a,  a, 0.0f}, {0.0, 1.0, 0.0}},	//1
+							{{-a, -a, 0.0f}, {1.0, 0.0, 0.0}},	//2
+							{{ a,  a, 0.0f}, {1.0, 0.0, 0.0}},	//3
+							{{-a,  a, 0.0f}, {0.0, 1.0, 0.0}},	//1
+							{{ a, -a, 0.0f}, {0.0, 0.0, 1.0}}	//0
 						};
+		const std::vector<uint32_t> _indices = {0,1,2,3,1,0};
 		
 
 	#ifdef NDEBUG
@@ -121,9 +122,11 @@ namespace Rare {
 		//Fences (denoted with a f_)
 		std::vector<VkFence> _f_inFlight, _f_imagesInFlight;
 
-		//Vertex Buffer object
+		//Buffers
 		VkBuffer _vertexBuffer;
 		VkDeviceMemory _vertexBufferMemory;
+		VkBuffer _indexBuffer;
+		VkDeviceMemory _indexBufferMemory;
 
 		void _createVkInstance();
 		void _createSurface();
@@ -141,6 +144,7 @@ namespace Rare {
 		void _recreateSwapChain();
 		void _cleanupSwapChain();
 		void _createVertexBuffer();
+		void _createIndexBuffer();
 		void _createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 		void _copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
 

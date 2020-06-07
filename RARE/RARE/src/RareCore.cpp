@@ -112,6 +112,11 @@ namespace Rare {
 		_createVertexBuffer();
 		RARE_LOG("Create Vertex Buffer:\t\t Initialization complete\n");
 
+		//begin creating vertex buffers
+		RARE_LOG("Create Index Buffer:\t\t Begin init");
+		_createIndexBuffer();
+		RARE_LOG("Create Index Buffer:\t\t Initialization complete\n");
+
 		//begin creating command buffers
 		RARE_LOG("Create Command Buffers:\t Begin init");
 		_createCommandBuffers();
@@ -153,13 +158,35 @@ namespace Rare {
 
 	}
 
+	void RareCore::_createIndexBuffer() {
+		VkDeviceSize bufferSize = sizeof(_indices[0]) * _indices.size();
+
+		VkBuffer stagingBuffer;
+		VkDeviceMemory stagingBufferMemory;
+
+		_createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);//staging buffer app side
+
+
+		void* data;
+		vkMapMemory(_logicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
+		memcpy(data, _indices.data(), (size_t)bufferSize);
+		vkUnmapMemory(_logicalDevice, stagingBufferMemory);
+
+		_createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _indexBuffer, _indexBufferMemory);//Index buffer on gpu
+
+		_copyBuffer(stagingBuffer, _indexBuffer, bufferSize);
+
+		vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
+		vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
+	}
+
 	void RareCore::_createVertexBuffer() {
 		VkDeviceSize bufferSize = sizeof(_vertices[0]) * _vertices.size();
 
 		VkBuffer stagingBuffer;
 		VkDeviceMemory stagingBufferMemory;
 
-		_createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+		_createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);//staging buffer app side
 		
 
 		void* data;
@@ -167,7 +194,7 @@ namespace Rare {
 		memcpy(data, _vertices.data(), (size_t)bufferSize);
 		vkUnmapMemory(_logicalDevice, stagingBufferMemory);
 
-		_createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _vertexBuffer, _vertexBufferMemory);
+		_createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _vertexBuffer, _vertexBufferMemory);//vertex buffer on gpu
 
 		_copyBuffer(stagingBuffer, _vertexBuffer, bufferSize);
 
@@ -179,7 +206,7 @@ namespace Rare {
 		/*
 		You may wish to create a separate command pool for these kinds of short-lived buffers, 
 		because the implementation may be able to apply memory allocation optimizations. 
-		You should use the VK_COMMAND_POOL_CREATE_TRANSIENT_BIT flag during command pool generation in that case.
+		You should use the VK_COMMAND_POOL_CREATE_TRANSIENT_BIT(tmp) flag during command pool generation in that case.
 		*/
 		VkCommandBufferAllocateInfo acInfo{};
 		acInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -409,7 +436,7 @@ namespace Rare {
 		static double start = glfwGetTime();
 		static double delta;
 		glfwPollEvents();//assign this to a daemon thread and lock event manager to synch assignments
-		_coreShouldClose = (delta = glfwGetTime() - start) >= 44 ? true : false;
+		//_coreShouldClose = (delta = glfwGetTime() - start) >= 44 ? true : false;
 
 	}
 
@@ -496,9 +523,10 @@ namespace Rare {
 	void RareCore::dispose() {
 		_cleanupSwapChain();
 
+		vkDestroyBuffer(_logicalDevice, _indexBuffer, nullptr);
+		vkFreeMemory(_logicalDevice, _indexBufferMemory, nullptr);
 		vkDestroyBuffer(_logicalDevice, _vertexBuffer, nullptr);
 		vkFreeMemory(_logicalDevice, _vertexBufferMemory, nullptr);
-		vkDestroyBuffer(_logicalDevice, _vertexBuffer, nullptr);
 
 		for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {
 			vkDestroySemaphore(_logicalDevice, _s_imageAvailable[i], nullptr);
@@ -1113,8 +1141,10 @@ namespace Rare {
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(_commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
+			vkCmdBindIndexBuffer(_commandBuffers[i], _indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-			vkCmdDraw(_commandBuffers[i], static_cast<uint32_t>(_vertices.size()), 1, 0, 0);
+
+			vkCmdDrawIndexed(_commandBuffers[i], static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
 			vkCmdEndRenderPass(_commandBuffers[i]);
 
 			if (vkEndCommandBuffer(_commandBuffers[i]) != VK_SUCCESS) {

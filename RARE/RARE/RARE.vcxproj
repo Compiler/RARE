@@ -101,6 +101,7 @@
     <ClCompile Include="src\Tools\Logger.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\PhysicalDevices\DeviceOptions.h" />
     <ClInclude Include="src\Tools\GLFWCallbacks.h" />
     <ClInclude Include="src\PhysicalDevices\GPUDevice.h" />
     <ClInclude Include="src\RareCore.h" />

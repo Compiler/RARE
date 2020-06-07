@@ -43,6 +43,9 @@
     <ClInclude Include="src\Tools\GLFWCallbacks.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\PhysicalDevices\DeviceOptions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\shaders\FragmentShader.frag" />
