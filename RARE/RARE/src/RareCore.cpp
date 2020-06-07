@@ -126,37 +126,100 @@ namespace Rare {
 		RARE_LOG("Initialization complete");
 	}
 
-	void RareCore::_createVertexBuffer() {
+	void RareCore::_createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
 		VkBufferCreateInfo bufferInfo{};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = sizeof(_vertices[0]) * _vertices.size();
-		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		bufferInfo.size = size;
+		bufferInfo.usage = usage;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		bufferInfo.flags = 0;
-		if (vkCreateBuffer(_logicalDevice, &bufferInfo, nullptr, &_vertexBuffer) != VK_SUCCESS) {
-			RARE_FATAL("failed to create vertex buffer");
+		if (vkCreateBuffer(_logicalDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+			RARE_FATAL("failed to create buffer");
 		}
 
 
 		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(_logicalDevice, _vertexBuffer, &memRequirements);
-		RARE_DEBUG("Needs {} bytes for vertex buffer", memRequirements.size);
+		vkGetBufferMemoryRequirements(_logicalDevice, buffer, &memRequirements);
+		RARE_DEBUG("Needs {} bytes for buffer", memRequirements.size);
 
 		VkMemoryAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		allocInfo.allocationSize = memRequirements.size;
-		allocInfo.memoryTypeIndex = _findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-		if (vkAllocateMemory(_logicalDevice, &allocInfo, nullptr, &_vertexBufferMemory) != VK_SUCCESS) {
-			RARE_FATAL("failed to allocate vertex buffer memory");
+		allocInfo.memoryTypeIndex = _findMemoryType(memRequirements.memoryTypeBits, properties);
+		if (vkAllocateMemory(_logicalDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+			RARE_FATAL("failed to allocate buffer memory");
 		}
-		vkBindBufferMemory(_logicalDevice, _vertexBuffer, _vertexBufferMemory, 0);
-
-		void* data;
-		vkMapMemory(_logicalDevice, _vertexBufferMemory, 0, bufferInfo.size, 0, &data);
-		memcpy(data, _vertices.data(), (size_t)bufferInfo.size);
-		vkUnmapMemory(_logicalDevice, _vertexBufferMemory);
+		vkBindBufferMemory(_logicalDevice, buffer, bufferMemory, 0);
 
 	}
+
+	void RareCore::_createVertexBuffer() {
+		VkDeviceSize bufferSize = sizeof(_vertices[0]) * _vertices.size();
+
+		VkBuffer stagingBuffer;
+		VkDeviceMemory stagingBufferMemory;
+
+		_createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+		
+
+		void* data;
+		vkMapMemory(_logicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
+		memcpy(data, _vertices.data(), (size_t)bufferSize);
+		vkUnmapMemory(_logicalDevice, stagingBufferMemory);
+
+		_createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _vertexBuffer, _vertexBufferMemory);
+
+		_copyBuffer(stagingBuffer, _vertexBuffer, bufferSize);
+
+		vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
+		vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
+	}
+
+	void RareCore::_copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size) {
+		/*
+		You may wish to create a separate command pool for these kinds of short-lived buffers, 
+		because the implementation may be able to apply memory allocation optimizations. 
+		You should use the VK_COMMAND_POOL_CREATE_TRANSIENT_BIT flag during command pool generation in that case.
+		*/
+		VkCommandBufferAllocateInfo acInfo{};
+		acInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		acInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		acInfo.commandPool = _commandPool;
+		acInfo.commandBufferCount = 1;
+
+		VkCommandBuffer cbuff;
+		vkAllocateCommandBuffers(_logicalDevice, &acInfo, &cbuff);
+
+		VkCommandBufferBeginInfo binfo{};
+		binfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		binfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		vkBeginCommandBuffer(cbuff, &binfo);
+
+		VkBufferCopy copyRegion{};
+		copyRegion.srcOffset = 0;
+		copyRegion.dstOffset = 0;
+		copyRegion.size = size;
+		vkCmdCopyBuffer(cbuff, src, dst, 1, &copyRegion);
+		vkEndCommandBuffer(cbuff);
+		VkSubmitInfo sinfo{};
+		sinfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		sinfo.commandBufferCount = 1;
+		sinfo.pCommandBuffers = &cbuff;
+
+		vkQueueSubmit(_graphicsQueue, 1, &sinfo, VK_NULL_HANDLE);
+		vkQueueWaitIdle(_graphicsQueue);
+		/*
+		There are again two possible ways to wait on this transfer to complete. We could use a fence and wait with vkWaitForFences,
+		or simply wait for the transfer queue to become idle with vkQueueWaitIdle. 
+		A fence would allow you to schedule multiple transfers simultaneously and wait for all of them complete, 
+		instead of executing one at a time. That may give the driver more opportunities to optimize.
+		*/
+
+		vkFreeCommandBuffers(_logicalDevice, _commandPool, 1, &cbuff);
+
+	}
+
 	uint32_t RareCore::_findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
 		VkPhysicalDeviceMemoryProperties memProperties;
 		vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memProperties);

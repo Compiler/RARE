@@ -141,7 +141,10 @@ namespace Rare {
 		void _recreateSwapChain();
 		void _cleanupSwapChain();
 		void _createVertexBuffer();
-		
+		void _createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+		void _copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
+
+
 		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 		
 

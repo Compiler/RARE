@@ -188,7 +188,7 @@ namespace Rare {
 		for (const VkQueueFamilyProperties& queueFamily : queueFamilies) {
 			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 				indices.graphicsFamily = index;
-			VkBool32 presentSupport = false;
+			VkBool32 presentSupport = false;//remember
 			vkGetPhysicalDeviceSurfaceSupportKHR(device, index, _surface, &presentSupport);
 			if (presentSupport) indices.presentationFamily = index; //same queue family 
 			if (indices.isComplete())
