@@ -199,3 +199,7 @@ void GLFWCallbacks::keyCallback(GLFWwindow* window, int key, int scancode, int a
 
 
 }
+
+void GLFWCallbacks::cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
+	Rare::InputManager::addMousePosition(xpos, ypos);
+}

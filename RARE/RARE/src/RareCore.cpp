@@ -44,7 +44,7 @@ namespace Rare {
 
 		glfwSetFramebufferSizeCallback(_windowRef, GLFWCallbacks::framebufferResizeCallback);
 		glfwSetKeyCallback(_windowRef, GLFWCallbacks::keyCallback);
-		//glfwSetCursorPosCallback(_windowRef, GLFWCallbacks);
+		glfwSetCursorPosCallback(_windowRef, GLFWCallbacks::cursorPositionCallback);
 		glfwSetMouseButtonCallback(_windowRef, GLFWCallbacks::mouseClickCallback);
 		
 		glfwSetWindowUserPointer(_windowRef, this);
