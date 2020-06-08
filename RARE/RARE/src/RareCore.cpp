@@ -101,6 +101,10 @@ namespace Rare {
 		_createCommandPool();
 		RARE_LOG("Create Command Pool:\t\t Initialization complete\n");
 
+		RARE_LOG("Create Texture Image:\t\t Begin init");
+		_createTextureImage();
+		RARE_LOG("Create Texture Image:\t\t Initialization complete\n");
+
 		RARE_LOG("Create Vertex Buffer:\t\t Begin init");
 		_createVertexBuffer();
 		RARE_LOG("Create Vertex Buffer:\t\t Initialization complete\n");
@@ -131,6 +135,26 @@ namespace Rare {
 		
 
 		RARE_LOG("Initialization complete");
+	}
+
+
+	void RareCore::_createTextureImage() {
+		int texWidth, texHeight, texChannels;
+		unsigned char* pixels = FileLoaderFactory::loadImage(RARE_INTERNAL_TEXTURE("cheapbricks_diffuse.jpg"), &texWidth, &texHeight, &texChannels);
+		VkDeviceSize imageSize = texWidth * texHeight * 4;
+
+		if (!pixels) {
+			RARE_FATAL("Failed to load texture image");
+		}
+
+		VkBuffer stagingBuffer;
+		VkDeviceMemory stagingBufferMemory;
+		_createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+		//map pixels from loadImage to buffer
+		void* data;
+		vkMapMemory(_logicalDevice, stagingBufferMemory, 0, imageSize, 0, &data);
+		vkUnmapMemory(_logicalDevice, stagingBufferMemory);
 	}
 
 	void RareCore::_createDescriptorSets() {
@@ -194,7 +218,6 @@ namespace Rare {
 		ubo.proj = glm::perspective(glm::radians(45.0f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 10.0f);
 		//ubo.proj[1][1] *= -1;
 		ubo.time = time;
-
 		void* data;
 		vkMapMemory(_logicalDevice, _uniformBuffersMemory[imageIndex], 0, sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));

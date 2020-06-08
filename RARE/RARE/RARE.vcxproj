@@ -63,7 +63,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>RARE_DEBUG_BUILD;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)RARE\outsourced\glm;$(SolutionDir)RARE\outsourced\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)RARE\outsourced\glm;$(SolutionDir)RARE\outsourced\spdlog\include;$(SolutionDir)RARE\outsourced\stbimage</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -82,7 +82,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>RARE_RELEASE_BUILD;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)RARE\outsourced\glm;$(SolutionDir)RARE\outsourced\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)RARE\outsourced\glm;$(SolutionDir)RARE\outsourced\spdlog\include;$(SolutionDir)RARE\outsourced\stbimage</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -104,6 +104,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\PhysicalDevices\DeviceOptions.h" />
+    <ClInclude Include="src\Tools\FileLoaders\FileLoaderFactory.h" />
     <ClInclude Include="src\Tools\GLFWCallbacks.h" />
     <ClInclude Include="src\PhysicalDevices\GPUDevice.h" />
     <ClInclude Include="src\RareCore.h" />

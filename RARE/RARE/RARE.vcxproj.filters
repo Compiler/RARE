@@ -55,6 +55,9 @@
     <ClInclude Include="src\Tools\Logging\Logger.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Tools\FileLoaders\FileLoaderFactory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\shaders\FragmentShader.frag" />

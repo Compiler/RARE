@@ -15,11 +15,12 @@
 #include <string>
 #include <Rendering/FileTypes/ShaderCompilation.h>
 #include <Tools/GLFWCallbacks.h>
+#include <Tools/FileLoaders/FileLoaderFactory.h>
 
 
 #define RARE_INTERNAL(x) "resources/" x
 #define RARE_INTERNAL_SHADER(x) RARE_INTERNAL("shaders/") x
-#define FPS_COUNTER_LOGGED 0
+#define FPS_COUNTER_LOGGED 1
 namespace Rare {
 	struct SwapChainSupportDetails {
 		VkSurfaceCapabilitiesKHR capabilities;
@@ -57,9 +58,9 @@ namespace Rare {
 
 	struct  UniformBufferObject {
 		alignas(16) float time;
-		alignas(16) glm::mat4 model;
-		glm::mat4 view;
-		glm::mat4 proj;
+		alignas(16)glm::mat4 model;
+		alignas(16)glm::mat4 view;
+		alignas(16)glm::mat4 proj;
 	};
 	class RareCore {
 
@@ -166,6 +167,7 @@ namespace Rare {
 		void _createUniformBuffers();
 		void _createDescriptorPool();
 		void _createDescriptorSets();
+		void _createTextureImage();
 		void _createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 		void _copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
 
