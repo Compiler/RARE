@@ -19,7 +19,7 @@
 
 
 
-#define FPS_COUNTER_LOGGED 0
+#define FPS_COUNTER_LOGGED 1
 namespace Rare {
 	struct SwapChainSupportDetails {
 		VkSurfaceCapabilitiesKHR capabilities;
@@ -144,6 +144,9 @@ namespace Rare {
 		VkDescriptorPool _descriptorPool;
 		std::vector<VkDescriptorSet> _descriptorSets;
 
+		//texture data
+		VkImage _textureImage;
+		VkDeviceMemory _textureImageMemory;
 
 		void _createVkInstance();
 		void _createSurface();
@@ -167,13 +170,16 @@ namespace Rare {
 		void _createDescriptorPool();
 		void _createDescriptorSets();
 		void _createTextureImage();
+		void _copyBufferToImage(VkBuffer buff, VkImage img, uint32_t width, uint32_t height);
+		void _transitionImageLayout(VkImage img, VkFormat fmt, VkImageLayout olay, VkImageLayout nlay);
+		void _createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 		void _createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 		void _copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
 
 		void _updateUniformBuffer(uint32_t imageIndex);
 		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-		
-
+		VkCommandBuffer _beginOneoffCommands();
+		void _endOneoffCommands(VkCommandBuffer cb);
 		uint32_t _findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
