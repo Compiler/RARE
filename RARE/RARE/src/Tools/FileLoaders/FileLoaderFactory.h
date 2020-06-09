@@ -10,7 +10,7 @@ namespace Rare {
 		FileLoaderFactory() = delete;
 
 		//rgba default composition
-		static unsigned char* loadImage(const char name[], int* width, int* height, int* numOfColChannels, int req_comp = STBI_rgb_alpha);
+		static unsigned char* loadImage(const char name[], int* width, int* height, int* numOfColChannels, int req_comp = 4/*STBI_rgb_alpha = 4*/);
 		static void free(void* data);
 
 	};

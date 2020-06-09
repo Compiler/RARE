@@ -29,6 +29,9 @@
     <ClCompile Include="src\Tools\Logging\Logger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Tools\FileLoaders\FileLoaderFactory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RareCore.h">
@@ -62,11 +65,22 @@
   <ItemGroup>
     <None Include="resources\shaders\FragmentShader.frag" />
     <None Include="resources\shaders\VertexShader.vert" />
-    <None Include="resources\compile.bat">
-      <Filter>Source Files</Filter>
-    </None>
     <None Include="resources\shaders\RayMarching.frag" />
     <None Include="resources\shaders\spv\FragmentShader.spv" />
     <None Include="resources\shaders\spv\VertexShader.spv" />
+    <None Include="resources\externalmodules\compile.bat">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="resources\textures\cheapbricks_diffuse.jpg" />
+    <Image Include="resources\textures\cheapbricks_normal.jpg" />
+    <Image Include="resources\textures\cheapbricks_height.jpg" />
+    <Image Include="resources\textures\container.png" />
+    <Image Include="resources\textures\Default.png" />
+    <Image Include="resources\textures\simple.png" />
+    <Image Include="resources\textures\graymarble.jpg" />
+    <Image Include="resources\textures\simple_normal.png" />
+    <Image Include="resources\textures\container_specular.png" />
   </ItemGroup>
 </Project>
