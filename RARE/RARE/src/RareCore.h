@@ -19,7 +19,7 @@
 
 
 
-#define FPS_COUNTER_LOGGED 0
+#define FPS_COUNTER_LOGGED 1
 namespace Rare {
 
 	template<typename T> struct Optional {
@@ -195,6 +195,7 @@ namespace Rare {
 		void _createTextureImageView();
 		void _createTextureSampler();
 		void _createDepthResources();
+		VkImageView _createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 		void _copyBufferToImage(VkBuffer buff, VkImage img, uint32_t width, uint32_t height);
 		void _transitionImageLayout(VkImage img, VkFormat fmt, VkImageLayout olay, VkImageLayout nlay);
 		void _createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);

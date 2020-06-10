@@ -95,10 +95,6 @@ namespace Rare {
 		_createGraphicsPipeline();
 		RARE_LOG("Create Graphics Pipeline:\t Initialization complete\n");
 
-		RARE_LOG("Create Framebuffers:\t\t Begin init");
-		_createFramebuffers();
-		RARE_LOG("Create Framebuffers:\t\t Initialization complete\n");
-
 		RARE_LOG("Create Command Pool:\t\t Begin init");
 		_createCommandPool();
 		RARE_LOG("Create Command Pool:\t\t Initialization complete\n");
@@ -106,6 +102,10 @@ namespace Rare {
 		RARE_LOG("Create Depth Resources:\t\t Begin init");
 		_createDepthResources();
 		RARE_LOG("Create Depth Resources:\t\t Initialization complete\n");
+
+		RARE_LOG("Create Framebuffers:\t\t Begin init");
+		_createFramebuffers();
+		RARE_LOG("Create Framebuffers:\t\t Initialization complete\n");
 
 		RARE_LOG("Create Texture Image:\t\t Begin init");
 		_createTextureImage();
@@ -154,7 +154,8 @@ namespace Rare {
 	void RareCore::_createDepthResources() {
 		VkFormat depthFormat = _findDepthFormat();
 		_createImage(_swapChainExtent.width, _swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _depthImage, _depthImageMemory);
-		_depthImageView = _createImageView(_depthImage, depthFormat);
+		_depthImageView = _createImageView(_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+		//TODO: Consider Explicitly transitioning the depth image to a depth attachment
 	}
 
 	VkFormat  RareCore::_findSupportedBitFormats(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
@@ -171,21 +172,28 @@ namespace Rare {
 		RARE_FATAL("failed to find supported format!");
 	}
 
-	void RareCore::_createTextureImageView() {
+	VkImageView RareCore::_createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
 		VkImageViewCreateInfo viewInfo{};
 		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		viewInfo.image = _textureImage;
+		viewInfo.image = image;
 		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		viewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+		viewInfo.format = format;
 		viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		viewInfo.subresourceRange.baseMipLevel = 0;
 		viewInfo.subresourceRange.levelCount = 1;
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount = 1;
+		viewInfo.subresourceRange.aspectMask = aspectFlags;
 
-		if (vkCreateImageView(_logicalDevice, &viewInfo, nullptr, &_textureImageView) != VK_SUCCESS) {
+		VkImageView imageView;
+		if (vkCreateImageView(_logicalDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
 			RARE_FATAL("failed to create texture image view!");
 		}
+
+		return imageView;
+	}
+	void RareCore::_createTextureImageView() {
+		_textureImageView = _createImageView(_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 	}
 
 	void RareCore::_createTextureSampler() {
@@ -895,6 +903,8 @@ namespace Rare {
 	void RareCore::dispose() {
 		_cleanupSwapChain();
 
+		vkDestroyImageView(_logicalDevice, _textureImageView, nullptr);
+
 		vkDestroyImage(_logicalDevice, _textureImage, nullptr);
 		vkFreeMemory(_logicalDevice, _textureImageMemory, nullptr);
 
@@ -1144,28 +1154,7 @@ namespace Rare {
 	void RareCore::_createImageViews() {
 		_swapChainImageViews.resize(_swapChainImages.size());
 		for (int i = 0; i < _swapChainImages.size(); i++) {
-			VkImageViewCreateInfo createInfo{};
-			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			createInfo.image = _swapChainImages[i];
-			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			createInfo.format = _swapChainImageFormat;
-
-			//color channels
-			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-			//images purpose and which parts of image to access
-			createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			createInfo.subresourceRange.baseMipLevel = 0;
-			createInfo.subresourceRange.levelCount = 1;
-			createInfo.subresourceRange.baseArrayLayer = 0;
-			createInfo.subresourceRange.layerCount = 1;
-
-			if (vkCreateImageView(_logicalDevice, &createInfo, nullptr, &_swapChainImageViews[i]) != VK_SUCCESS) {
-				RARE_FATAL("Couldn't create image view object from image");
-			}
+			_swapChainImageViews[i] = _createImageView(_swapChainImages[i], _swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 		}
 	}
 
@@ -1186,15 +1175,30 @@ namespace Rare {
 		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;//layout used for images that are presented to the swapchain
 
+		VkAttachmentDescription depthAttachment{};
+		depthAttachment.format = _findDepthFormat();
+		depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
 		//Create Subpasses
 		VkAttachmentReference colAttRef{};
 		colAttRef.attachment = 0;//index of attachment to reference
 		colAttRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;//layout used for images that are used as color attachments
 
+		VkAttachmentReference depAttRef{};
+		depAttRef.attachment = 1;//index of attachment to reference
+		depAttRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;//layout used for images that are used as depth attachments
+
 		VkSubpassDescription subpass{};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;//subpass bind for graphics rather than compute
 		subpass.colorAttachmentCount = 1;
 		subpass.pColorAttachments = &colAttRef;//referenced from fragment shader in the line "layout(location = 0) out vec4 outColor;"
+		subpass.pDepthStencilAttachment = &depAttRef;
 
 		VkSubpassDependency dependency{};
 		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -1205,10 +1209,11 @@ namespace Rare {
 		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
 		//Create Render Pass
+		std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
 		VkRenderPassCreateInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = 1;
-		renderPassInfo.pAttachments = &colorAttachment;
+		renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+		renderPassInfo.pAttachments = attachments.data();
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
 		renderPassInfo.dependencyCount = 1;
@@ -1219,7 +1224,6 @@ namespace Rare {
 		}
 
 	}
-
 
 	void RareCore::_cleanupSwapChain() {
 		RARE_LOG("Beginning cleaning of swap chain");
@@ -1234,6 +1238,9 @@ namespace Rare {
 		vkDestroyPipelineLayout(_logicalDevice, _pipelineLayout, nullptr);
 		vkDestroyRenderPass(_logicalDevice, _renderPass, nullptr);
 
+		vkDestroyImageView(_logicalDevice, _depthImageView, nullptr);
+		vkDestroyImage(_logicalDevice, _depthImage, nullptr);
+		vkFreeMemory(_logicalDevice, _depthImageMemory, nullptr);
 		for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
 			vkDestroyImageView(_logicalDevice, _swapChainImageViews[i], nullptr);
 		}
@@ -1271,6 +1278,7 @@ namespace Rare {
 		_createImageViews();
 		_createRenderPass(); //depends on format of swap chain images
 		_createGraphicsPipeline();
+		_createDepthResources();
 		_createFramebuffers();
 		_createUniformBuffers();
 		_createDescriptorPool();
@@ -1408,6 +1416,19 @@ namespace Rare {
 		dynamicState.pDynamicStates = dynamicStates;
 
 
+		//depth stencil creation
+		VkPipelineDepthStencilStateCreateInfo depthStencil{};
+		depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depthStencil.depthTestEnable = VK_TRUE;
+		depthStencil.depthWriteEnable = VK_TRUE;
+		depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;//lower depth value = closer
+		depthStencil.depthBoundsTestEnable = VK_FALSE;//culls fragments that fall out of depth range?
+		depthStencil.minDepthBounds = 0.0f;
+		depthStencil.maxDepthBounds = 1.0f;
+		depthStencil.stencilTestEnable = VK_FALSE;
+		//depthStencil.front{};
+		//depthStencil.back{};
+
 		//Pipeline layout
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -1439,6 +1460,7 @@ namespace Rare {
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 		pipelineInfo.basePipelineIndex = -1;
+		pipelineInfo.pDepthStencilState = &depthStencil;
 
 		if (vkCreateGraphicsPipelines(_logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_graphicsPipeline) != VK_SUCCESS) {
 			RARE_FATAL("Failed to create graphics pipeline");
@@ -1465,13 +1487,13 @@ namespace Rare {
 	void RareCore::_createFramebuffers() {
 		_swapChainFramebuffers.resize(_swapChainImageViews.size());
 		for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
-			VkImageView attachments[] = { _swapChainImageViews[i] };
+			std::array<VkImageView, 2> attachments = { _swapChainImageViews[i], _depthImageView };
 
 			VkFramebufferCreateInfo framebufferInfo{};
 			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			framebufferInfo.renderPass = _renderPass;
-			framebufferInfo.attachmentCount = 1;
-			framebufferInfo.pAttachments = attachments;
+			framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());;
+			framebufferInfo.pAttachments = attachments.data();
 			framebufferInfo.width = _swapChainExtent.width;
 			framebufferInfo.height = _swapChainExtent.height;
 			framebufferInfo.layers = 1;
@@ -1523,9 +1545,11 @@ namespace Rare {
 			rpInfo.renderArea.offset = { 0, 0 };
 			rpInfo.renderArea.extent = _swapChainExtent;
 
-			VkClearValue clearColor = { 0.3f, 0.3f, 0.35f, 1.0f };//clear color used for VK_ATTACHMENT_LOAD_OP_CLEAR
-			rpInfo.clearValueCount = 1;
-			rpInfo.pClearValues = &clearColor;
+			std::array<VkClearValue, 2> clearValues{};
+			clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
+			clearValues[1].depthStencil = { 1.0f, 0 };//clear color used for VK_ATTACHMENT_LOAD_OP_CLEAR
+			rpInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+			rpInfo.pClearValues = clearValues.data();
 
 			vkCmdBeginRenderPass(_commandBuffers[i], &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 			vkCmdBindPipeline(_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline);
