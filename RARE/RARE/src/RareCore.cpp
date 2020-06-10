@@ -308,17 +308,20 @@ namespace Rare {
 		void* data;
 		vkMapMemory(_logicalDevice, stagingBufferMemory, 0, imageSize, 0, &data);
 		vkUnmapMemory(_logicalDevice, stagingBufferMemory);
-		FileLoaderFactory::free(pixels);
 
 		_createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
 			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _textureImage, _textureImageMemory);
-
+		RARE_DEBUG("Created image");
 		_transitionImageLayout(_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		RARE_DEBUG("Transitioned image layout image");
 		_copyBufferToImage(stagingBuffer, _textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+		RARE_DEBUG("Coppied buffer to  image");
 		_transitionImageLayout(_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		RARE_DEBUG("Transitioned image layout image");
 
 		vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
 		vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
+		FileLoaderFactory::free(pixels);
 
 	}
 
