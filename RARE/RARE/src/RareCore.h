@@ -81,9 +81,15 @@ namespace Rare {
 							{{ a, -a, 0.0f}, {0.0, 0.0, 1.0}, {1.0f, 0.0f}},	//0
 							{{-a,  a, 0.0f}, {0.0, 1.0, 0.0}, {0.0f, 1.0f}},	//1
 							{{-a, -a, 0.0f}, {1.0, 0.0, 0.0}, {0.0f, 0.0f}},	//2
-							{{ a,  a, 0.0f}, {1.0, 0.0, 0.0}, {1.0f, 1.0f}}	//3
+							{{ a,  a, 0.0f}, {1.0, 0.0, 0.0}, {1.0f, 1.0f}},	//3
+
+							{{ a, -a, -0.5f }, {0.0, 0.0, 1.0}, {1.0f, 0.0f}},	//4
+							{{-a,  a, -0.5f}, {0.0, 1.0, 0.0}, {0.0f, 1.0f}},	//5
+							{{-a, -a, -0.5f}, {1.0, 0.0, 0.0}, {0.0f, 0.0f}},	//6
+							{{ a,  a, -0.5f}, {1.0, 0.0, 0.0}, {1.0f, 1.0f}}		//7
 		};
-		const std::vector<uint32_t> _indices = { 0,1,2,3,1,0 };
+		static constexpr int offset = 4;
+		const std::vector<uint32_t> _indices = { 0,1,2,3,1,0,	4, 5, 6, 7, 5, 4};
 
 
 	#ifdef NDEBUG
@@ -159,6 +165,11 @@ namespace Rare {
 		VkImageView _textureImageView;
 		VkSampler _textureSampler;
 
+		//depth buffering
+		VkImage _depthImage;
+		VkDeviceMemory _depthImageMemory;
+		VkImageView _depthImageView;
+
 		void _createVkInstance();
 		void _createSurface();
 		void _createLogicalDevice();
@@ -183,11 +194,24 @@ namespace Rare {
 		void _createTextureImage();
 		void _createTextureImageView();
 		void _createTextureSampler();
+		void _createDepthResources();
 		void _copyBufferToImage(VkBuffer buff, VkImage img, uint32_t width, uint32_t height);
 		void _transitionImageLayout(VkImage img, VkFormat fmt, VkImageLayout olay, VkImageLayout nlay);
 		void _createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 		void _createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 		void _copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
+
+		VkFormat _findDepthFormat() {
+			return _findSupportedBitFormats(
+				{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
+				VK_IMAGE_TILING_OPTIMAL,
+				VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+			);
+		}
+		VkFormat  _findSupportedBitFormats(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+		bool _hasStencilComponent(VkFormat format) {
+			return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+		}
 
 		void _updateUniformBuffer(uint32_t imageIndex);
 		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);

@@ -102,6 +102,10 @@ namespace Rare {
 		RARE_LOG("Create Command Pool:\t\t Begin init");
 		_createCommandPool();
 		RARE_LOG("Create Command Pool:\t\t Initialization complete\n");
+		
+		RARE_LOG("Create Depth Resources:\t\t Begin init");
+		_createDepthResources();
+		RARE_LOG("Create Depth Resources:\t\t Initialization complete\n");
 
 		RARE_LOG("Create Texture Image:\t\t Begin init");
 		_createTextureImage();
@@ -145,6 +149,26 @@ namespace Rare {
 
 
 		RARE_LOG("Initialization complete");
+	}
+
+	void RareCore::_createDepthResources() {
+		VkFormat depthFormat = _findDepthFormat();
+		_createImage(_swapChainExtent.width, _swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _depthImage, _depthImageMemory);
+		_depthImageView = _createImageView(_depthImage, depthFormat);
+	}
+
+	VkFormat  RareCore::_findSupportedBitFormats(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
+		for (VkFormat format : candidates) {
+			VkFormatProperties props;
+			vkGetPhysicalDeviceFormatProperties(_physicalDevice, format, &props);
+
+			if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+				return format;
+			} else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+				return format;
+			}
+		}
+		RARE_FATAL("failed to find supported format!");
 	}
 
 	void RareCore::_createTextureImageView() {
