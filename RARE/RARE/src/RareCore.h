@@ -13,15 +13,14 @@
 #include <algorithm>
 #include <fstream>
 #include <string>
+#include "Tools/GLFWCallbacks.h"
 #include <Rendering/FileTypes/ShaderCompilation.h>
-#include <Tools/GLFWCallbacks.h>
 #include <Tools/FileLoaders/FileLoaderFactory.h>
 
 
 
 #define FPS_COUNTER_LOGGED 1
 namespace Rare {
-
 	template<typename T> struct Optional {
 		T value;
 		bool has_value;
@@ -77,7 +76,7 @@ namespace Rare {
 	private:
 
 		static constexpr float a = 0.75f;
-		const std::vector<VertexData> _vertices = {
+		std::vector<VertexData> _vertices;/* = {
 							{{ a, -a, 0.0f}, {0.0, 0.0, 1.0}, {1.0f, 0.0f}},	//0
 							{{-a,  a, 0.0f}, {0.0, 1.0, 0.0}, {0.0f, 1.0f}},	//1
 							{{-a, -a, 0.0f}, {1.0, 0.0, 0.0}, {0.0f, 0.0f}},	//2
@@ -87,9 +86,9 @@ namespace Rare {
 							{{-a,  a, -0.5f}, {0.0, 1.0, 0.0}, {0.0f, 1.0f}},	//5
 							{{-a, -a, -0.5f}, {1.0, 0.0, 0.0}, {0.0f, 0.0f}},	//6
 							{{ a,  a, -0.5f}, {1.0, 0.0, 0.0}, {1.0f, 1.0f}}		//7
-		};
+		};*/
 		static constexpr int offset = 4;
-		const std::vector<uint32_t> _indices = { 0,1,2,3,1,0,	4, 5, 6, 7, 5, 4};
+		std::vector<uint32_t> _indices;/* = { 0,1,2,3,1,0,	4, 5, 6, 7, 5, 4 };*/
 
 
 	#ifdef NDEBUG
@@ -108,6 +107,8 @@ namespace Rare {
 		const int _WIDTH = 640, _HEIGHT = 480;
 		const int _MAX_FRAMES_IN_FLIGHT = 2;
 		size_t _currentFrame = 0;
+		const std::string _MODEL_PATH = RARE_INTERNAL_MODEL("viking_room.obj");
+		const std::string _TEXTURE_PATH = RARE_INTERNAL_TEXTURE("viking_room.png");
 
 		//vk setup core
 		VkInstance _vkInstance;
@@ -195,6 +196,7 @@ namespace Rare {
 		void _createTextureImageView();
 		void _createTextureSampler();
 		void _createDepthResources();
+		void _loadModel();
 		VkImageView _createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 		void _copyBufferToImage(VkBuffer buff, VkImage img, uint32_t width, uint32_t height);
 		void _transitionImageLayout(VkImage img, VkFormat fmt, VkImageLayout olay, VkImageLayout nlay);
@@ -271,14 +273,18 @@ namespace Rare {
 			VkDebugUtilsMessageTypeFlagsEXT messageType,
 			const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 			void* pUserData) {
-			if (messageSeverity > VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-				RARE_FATAL("\nVALIDATION FATAL\n:{}:{}\t{}\n", __FILENAME__, __LINE__, pCallbackData->pMessage)//no semi :D
-			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+			if (messageSeverity > VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+				RARE_FATAL("\nVALIDATION FATAL\n:{}:{}\t{}\n", __FILENAME__, __LINE__, pCallbackData->pMessage);
+			}
+			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
 				RARE_ERROR("\nVALIDATION ERROR\n:{}:{}\t{}\n", __FILENAME__, __LINE__, pCallbackData->pMessage);
-			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+			}
+			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
 				RARE_WARN("\nVALIDATION WARN\N:{}:{}\t{}\n", __FILENAME__, __LINE__, pCallbackData->pMessage);
-			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
+			}
+			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
 				RARE_LOG("\nVALIDATION LOG\n:{}:{}\t{}\n", __FILENAME__, __LINE__, pCallbackData->pMessage);
+			}
 			return VK_FALSE;
 		}
 		static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,

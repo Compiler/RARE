@@ -1,4 +1,6 @@
 #include "RareCore.h"
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
 
 namespace Rare {
 	struct RareCore::QueueFamilyIndices {
@@ -119,6 +121,10 @@ namespace Rare {
 		_createTextureSampler();
 		RARE_LOG("Create Texture Sampler:\t\t Initialization complete\n");
 
+		RARE_LOG("Load Model:\t\t Begin init");
+		_loadModel();
+		RARE_LOG("Load Model:\t\t Load complete\n");
+
 		RARE_LOG("Create Vertex Buffer:\t\t Begin init");
 		_createVertexBuffer();
 		RARE_LOG("Create Vertex Buffer:\t\t Initialization complete\n");
@@ -194,6 +200,38 @@ namespace Rare {
 	}
 	void RareCore::_createTextureImageView() {
 		_textureImageView = _createImageView(_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+	}
+
+	void RareCore::_loadModel() {
+		tinyobj::attrib_t attrib;
+		std::vector<tinyobj::shape_t> shapes;
+		std::vector<tinyobj::material_t> materials;
+		std::string wrn, err;
+
+		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &wrn, &err, _MODEL_PATH.c_str())) {
+			RARE_FATAL("Tinyobj Warn: {} \n Tinyobj Error: {}", wrn, err);
+		}
+
+		for (const auto& shape : shapes) {
+			for (const auto& index : shape.mesh.indices) {
+				VertexData vertex{};
+				vertex.position = {
+					attrib.vertices[3 * index.vertex_index + 0],
+					attrib.vertices[3 * index.vertex_index + 1],
+					attrib.vertices[3 * index.vertex_index + 2]
+				};
+
+				vertex.texCoord = {
+					attrib.texcoords[2 * index.texcoord_index + 0],
+					1.0f- attrib.texcoords[2 * index.texcoord_index + 1]
+				};
+
+				vertex.color = { 1.0f, 1.0f, 1.0f };
+
+				_vertices.push_back(vertex);
+				_indices.push_back(_indices.size());
+			}
+		}
 	}
 
 	void RareCore::_createTextureSampler() {
@@ -337,7 +375,7 @@ namespace Rare {
 
 	void RareCore::_createTextureImage() {
 		int texWidth, texHeight, texChannels;
-		unsigned char* pixels = FileLoaderFactory::loadImage(RARE_INTERNAL_TEXTURE("container.png"), &texWidth, &texHeight, &texChannels);
+		unsigned char* pixels = FileLoaderFactory::loadImage(_TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels);
 		VkDeviceSize imageSize = texWidth * texHeight * 4;
 
 		if (!pixels) {
@@ -483,10 +521,10 @@ namespace Rare {
 	void RareCore::_updateUniformBuffer(uint32_t imageIndex) {
 		float time = glfwGetTime();
 		UniformBufferObject ubo{};
-		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.model = glm::rotate(glm::mat4(1.0f), /*time **/ glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		ubo.proj = glm::perspective(glm::radians(45.0f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 10.0f);
-		//ubo.proj[1][1] *= -1;
+		ubo.proj[1][1] *= -1;
 		ubo.time = time;
 		void* data;
 		vkMapMemory(_logicalDevice, _uniformBuffersMemory[imageIndex], 0, sizeof(ubo), 0, &data);
@@ -1363,7 +1401,7 @@ namespace Rare {
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
 		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;//VK_CULL_MODE_NONE
-		rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE ;//Vertex winding order
+		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE ;//Vertex winding order
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f;
 		rasterizer.depthBiasClamp = 0.0f;

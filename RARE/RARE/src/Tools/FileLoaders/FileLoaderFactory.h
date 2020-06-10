@@ -4,6 +4,7 @@ namespace Rare {
 #define RARE_INTERNAL(x) "resources/" x
 #define RARE_INTERNAL_SHADER(x) RARE_INTERNAL("shaders/") x
 #define RARE_INTERNAL_TEXTURE(x) RARE_INTERNAL("textures/") x
+#define RARE_INTERNAL_MODEL(x) RARE_INTERNAL("models/") x
 	class FileLoaderFactory {
 
 	public:
