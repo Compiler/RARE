@@ -7,7 +7,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <Tools/Logging/Logger.h>
 #include <map>
-#include <optional>
 #include <set>
 #include <cstdint>
 #include <algorithm>
@@ -21,6 +20,11 @@
 
 #define FPS_COUNTER_LOGGED 1
 namespace Rare {
+
+	template<typename T> struct Optional {
+		T value;
+		bool has_value;
+	};
 	struct SwapChainSupportDetails {
 		VkSurfaceCapabilitiesKHR capabilities;
 		std::vector<VkSurfaceFormatKHR> formats;
@@ -73,9 +77,9 @@ namespace Rare {
 							{{ a,  a, 0.0f}, {1.0, 0.0, 0.0}},	//3
 							{{-a,  a, 0.0f}, {0.0, 1.0, 0.0}},	//1
 							{{ a, -a, 0.0f}, {0.0, 0.0, 1.0}}	//0
-						};
-		const std::vector<uint32_t> _indices = {0,1,2,3,1,0};
-		
+		};
+		const std::vector<uint32_t> _indices = { 0,1,2,3,1,0 };
+
 
 	#ifdef NDEBUG
 		const bool _enableValidationLayers = false;
@@ -100,7 +104,7 @@ namespace Rare {
 		VkDevice _logicalDevice;
 		VkDebugUtilsMessengerEXT _debugMessenger;
 		VkQueue _graphicsQueue;
-		VkQueue _presentationQueue;		
+		VkQueue _presentationQueue;
 		std::vector<const char*> requiredDeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME }; //these are the absolute bare minimum required extensions to be considered suitable
 
 		//wsi surface integration
@@ -147,6 +151,8 @@ namespace Rare {
 		//texture data
 		VkImage _textureImage;
 		VkDeviceMemory _textureImageMemory;
+		VkImageView _textureImageView;
+		VkSampler _textureSampler;
 
 		void _createVkInstance();
 		void _createSurface();
@@ -170,6 +176,8 @@ namespace Rare {
 		void _createDescriptorPool();
 		void _createDescriptorSets();
 		void _createTextureImage();
+		void _createTextureImageView();
+		void _createTextureSampler();
 		void _copyBufferToImage(VkBuffer buff, VkImage img, uint32_t width, uint32_t height);
 		void _transitionImageLayout(VkImage img, VkFormat fmt, VkImageLayout olay, VkImageLayout nlay);
 		void _createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
@@ -206,9 +214,9 @@ namespace Rare {
 		void dispose();
 
 		inline bool shouldClose() const { return _coreShouldClose; }
-		
 
-	//Static and Const
+
+		//Static and Const
 	private:
 
 
@@ -234,7 +242,7 @@ namespace Rare {
 			const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 			void* pUserData) {
 			if (messageSeverity > VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-				RARE_FATAL("\nVALIDATION FATAL\n:{}:{}\t{}\n", __FILENAME__, __LINE__, pCallbackData->pMessage)
+				RARE_FATAL("\nVALIDATION FATAL\n:{}:{}\t{}\n", __FILENAME__, __LINE__, pCallbackData->pMessage)//no semi :D
 			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 				RARE_ERROR("\nVALIDATION ERROR\n:{}:{}\t{}\n", __FILENAME__, __LINE__, pCallbackData->pMessage);
 			else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
@@ -249,8 +257,7 @@ namespace Rare {
 			auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 			if (func != nullptr) {
 				return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-			}
-			else {
+			} else {
 				return VK_ERROR_EXTENSION_NOT_PRESENT;
 			}
 		}
@@ -269,6 +276,6 @@ namespace Rare {
 
 	void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
 		const VkAllocationCallbacks* pAllocator);
-	
+
 
 }

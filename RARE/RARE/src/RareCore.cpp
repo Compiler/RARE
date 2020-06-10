@@ -2,24 +2,26 @@
 
 namespace Rare {
 	struct RareCore::QueueFamilyIndices {
-		std::optional<uint32_t> graphicsFamily;
-		std::optional<uint32_t> presentationFamily;
+		Optional<uint32_t> graphicsFamily;
+		Optional<uint32_t> presentationFamily;
 
 		//method to show whether or not a set of needed commands have be acquired 
 		bool isComplete() {
-			return graphicsFamily.has_value() && presentationFamily.has_value();
+			return graphicsFamily.has_value && presentationFamily.has_value;
 		}
 	};
 
 
-	RareCore::RareCore():_windowRefName("Default Name"),  _validationLayers({"VK_LAYER_KHRONOS_validation"}){ _coreShouldClose = false; }
+	RareCore::RareCore() :_windowRefName("Default Name"), _validationLayers({ "VK_LAYER_KHRONOS_validation" }) { _coreShouldClose = false; }
 	RareCore::RareCore(const char* windowName) : _windowRefName(windowName), _validationLayers({ "VK_LAYER_KHRONOS_validation" }) { _coreShouldClose = false; }
-	RareCore::RareCore(const char* windowName, const std::vector<const char*> validationLayers) 
-		: _windowRefName(windowName), _validationLayers(validationLayers){ _coreShouldClose = false; }
+	RareCore::RareCore(const char* windowName, const std::vector<const char*> validationLayers)
+		: _windowRefName(windowName), _validationLayers(validationLayers) {
+		_coreShouldClose = false;
+	}
 
 	void RareCore::init() {
 		{
-			std::unordered_map<uint32_t, std::string> map = { {0b00001, "bit 1"},{0b00010, "bit 2"},{0b00011, "bit 3"},{0b00100, "bit 4"},{0b00101, "bit 5"},{0b00110, "bit 6"},{0b00111, "bit 7"},{0b01000, "bit 8"}};
+			std::unordered_map<uint32_t, std::string> map = { {0b00001, "bit 1"},{0b00010, "bit 2"},{0b00011, "bit 3"},{0b00100, "bit 4"},{0b00101, "bit 5"},{0b00110, "bit 6"},{0b00111, "bit 7"},{0b01000, "bit 8"} };
 			uint32_t flags = 0b00001 | 0b00010 | 0b01011;
 			uint32_t runningFlag = flags;
 			while (flags != 0) {
@@ -32,7 +34,7 @@ namespace Rare {
 		}
 		//begin logger initialization
 		Rare::Logger::init();
-		
+
 		RARE_LOG("Logger:\t\t\t Initialization complete");
 
 		//begin glfw initialization
@@ -46,7 +48,7 @@ namespace Rare {
 		glfwSetKeyCallback(_windowRef, GLFWCallbacks::keyCallback);
 		glfwSetCursorPosCallback(_windowRef, GLFWCallbacks::cursorPositionCallback);
 		glfwSetMouseButtonCallback(_windowRef, GLFWCallbacks::mouseClickCallback);
-		
+
 		glfwSetWindowUserPointer(_windowRef, this);
 
 		glfwSetWindowPos(_windowRef, _WIDTH * 2, _HEIGHT);
@@ -105,6 +107,14 @@ namespace Rare {
 		_createTextureImage();
 		RARE_LOG("Create Texture Image:\t\t Initialization complete\n");
 
+		RARE_LOG("Create Texture Image View:\t\t Begin init");
+		_createTextureImageView();
+		RARE_LOG("Create Texture Image View:\t\t Initialization complete\n");
+
+		RARE_LOG("Create Texture Sampler:\t\t Begin init");
+		_createTextureSampler();
+		RARE_LOG("Create Texture Sampler:\t\t Initialization complete\n");
+
 		RARE_LOG("Create Vertex Buffer:\t\t Begin init");
 		_createVertexBuffer();
 		RARE_LOG("Create Vertex Buffer:\t\t Initialization complete\n");
@@ -112,7 +122,7 @@ namespace Rare {
 		RARE_LOG("Create Index Buffer:\t\t Begin init");
 		_createIndexBuffer();
 		RARE_LOG("Create Index Buffer:\t\t Initialization complete\n");
-		
+
 		RARE_LOG("Create Uniform Buffer:\t\t Begin init");
 		_createUniformBuffers();
 		RARE_LOG("Create Uniform Buffer:\t\t Initialization complete\n");
@@ -132,9 +142,50 @@ namespace Rare {
 		RARE_LOG("Create Synchronization Objects: Begin init");
 		_createSynchronizationObjects();
 		RARE_LOG("Create Synchronization Objects: Initialization complete\n");
-		
+
 
 		RARE_LOG("Initialization complete");
+	}
+
+	void RareCore::_createTextureImageView() {
+		VkImageViewCreateInfo viewInfo{};
+		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		viewInfo.image = _textureImage;
+		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		viewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+		viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		viewInfo.subresourceRange.baseMipLevel = 0;
+		viewInfo.subresourceRange.levelCount = 1;
+		viewInfo.subresourceRange.baseArrayLayer = 0;
+		viewInfo.subresourceRange.layerCount = 1;
+
+		if (vkCreateImageView(_logicalDevice, &viewInfo, nullptr, &_textureImageView) != VK_SUCCESS) {
+			RARE_FATAL("failed to create texture image view!");
+		}
+	}
+
+	void RareCore::_createTextureSampler() {
+		VkSamplerCreateInfo samplerInfo{};
+		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerInfo.magFilter = VK_FILTER_LINEAR;
+		samplerInfo.minFilter = VK_FILTER_LINEAR;
+		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.anisotropyEnable = VK_TRUE;
+		samplerInfo.maxAnisotropy = 16.0f;
+		samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		samplerInfo.unnormalizedCoordinates = VK_FALSE;
+		samplerInfo.compareEnable = VK_FALSE;
+		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		samplerInfo.mipLodBias = 0.0f;
+		samplerInfo.minLod = 0.0f;
+		samplerInfo.maxLod = 0.0f;
+
+		if (vkCreateSampler(_logicalDevice, &samplerInfo, nullptr, &_textureSampler) != VK_SUCCESS) {
+			RARE_FATAL("failed to create texture sampler!");
+		}
 	}
 
 	void RareCore::_copyBufferToImage(VkBuffer buff, VkImage img, uint32_t width, uint32_t height) {
@@ -183,15 +234,13 @@ namespace Rare {
 
 			srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 			dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-		}
-		else if (olay == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && nlay == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+		} else if (olay == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && nlay == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
 			srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 			dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		}
-		else {
+		} else {
 			RARE_FATAL("unsupported layout transition");
 		}
 
@@ -259,6 +308,7 @@ namespace Rare {
 		void* data;
 		vkMapMemory(_logicalDevice, stagingBufferMemory, 0, imageSize, 0, &data);
 		vkUnmapMemory(_logicalDevice, stagingBufferMemory);
+		FileLoaderFactory::free(pixels);
 
 		_createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
 			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _textureImage, _textureImageMemory);
@@ -269,7 +319,7 @@ namespace Rare {
 
 		vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
 		vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
-		
+
 	}
 
 	void RareCore::_createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
@@ -342,7 +392,7 @@ namespace Rare {
 			vkUpdateDescriptorSets(_logicalDevice, 1, &descriptorWrite, 0, nullptr);
 		}
 
-		
+
 	}
 
 	void RareCore::_createDescriptorPool() {
@@ -372,7 +422,7 @@ namespace Rare {
 		void* data;
 		vkMapMemory(_logicalDevice, _uniformBuffersMemory[imageIndex], 0, sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
-		vkUnmapMemory(_logicalDevice, _uniformBuffersMemory[imageIndex]); 
+		vkUnmapMemory(_logicalDevice, _uniformBuffersMemory[imageIndex]);
 
 
 	}
@@ -391,7 +441,7 @@ namespace Rare {
 
 	void RareCore::_createDescriptorSetLayout() {
 		VkDescriptorSetLayoutBinding uboLayoutBinding{};
-		uboLayoutBinding.binding = 0; 
+		uboLayoutBinding.binding = 0;
 		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		uboLayoutBinding.descriptorCount = 1;
 		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -466,7 +516,7 @@ namespace Rare {
 		VkDeviceMemory stagingBufferMemory;
 
 		_createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);//staging buffer app side
-		
+
 
 		void* data;
 		vkMapMemory(_logicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
@@ -483,8 +533,8 @@ namespace Rare {
 
 	void RareCore::_copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size) {
 		/*
-		You may wish to create a separate command pool for these kinds of short-lived buffers, 
-		because the implementation may be able to apply memory allocation optimizations. 
+		You may wish to create a separate command pool for these kinds of short-lived buffers,
+		because the implementation may be able to apply memory allocation optimizations.
 		You should use the VK_COMMAND_POOL_CREATE_TRANSIENT_BIT(tmp) flag during command pool generation in that case.
 		*/
 		VkCommandBuffer cbuff = _beginOneoffCommands();
@@ -527,9 +577,9 @@ namespace Rare {
 		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
 		appInfo.apiVersion = VK_API_VERSION_1_0;
 
-		
+
 		auto glfwExtensions = _getRequiredExtensions();
-		
+
 		uint32_t vkExtensionCount = 0;
 		vkEnumerateInstanceExtensionProperties(nullptr, &vkExtensionCount, nullptr);
 		std::vector<VkExtensionProperties> extensions(vkExtensionCount);
@@ -545,8 +595,7 @@ namespace Rare {
 		if (_enableValidationLayers) {
 			createInfo.enabledLayerCount = static_cast<uint32_t>(_validationLayers.size());
 			createInfo.ppEnabledLayerNames = _validationLayers.data();
-		}
-		else {
+		} else {
 			createInfo.enabledLayerCount = 0;
 		}
 
@@ -558,8 +607,7 @@ namespace Rare {
 
 			_populateDebugMessengerCreateInfo(debugCreateInfo);
 			createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
-		}
-		else {
+		} else {
 			createInfo.enabledLayerCount = 0;
 
 			createInfo.pNext = nullptr;
@@ -570,9 +618,9 @@ namespace Rare {
 		if (vkCreateInstance(&createInfo, nullptr, &_vkInstance) != VK_SUCCESS)
 			RARE_FATAL("Failed to create vkInstance");
 
-		
 
-		
+
+
 		RARE_DEBUG("{} extension(s) supported", vkExtensionCount);
 		RARE_DEBUG("{} glfw extension(s) required", static_cast<uint32_t>(glfwExtensions.size()));
 
@@ -590,7 +638,7 @@ namespace Rare {
 
 		VkDeviceQueueCreateInfo queueCreateInfo{};
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-		std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentationFamily.value() };
+		std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value, indices.presentationFamily.value };
 		float queuePriority = 1.0f;
 		for (uint32_t queueFamily : uniqueQueueFamilies) {
 			VkDeviceQueueCreateInfo queueCreateInfo{};
@@ -620,8 +668,8 @@ namespace Rare {
 
 		if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_logicalDevice) != VK_SUCCESS) RARE_FATAL("Couldn't create logical device");
 
-		vkGetDeviceQueue(_logicalDevice, indices.presentationFamily.value(), 0, &_presentationQueue);//index 0 cuz one queue family (graphics)
-		vkGetDeviceQueue(_logicalDevice, indices.graphicsFamily.value(), 0, &_graphicsQueue);
+		vkGetDeviceQueue(_logicalDevice, indices.presentationFamily.value, 0, &_presentationQueue);
+		vkGetDeviceQueue(_logicalDevice, indices.graphicsFamily.value, 0, &_graphicsQueue);
 
 	}
 
@@ -649,14 +697,13 @@ namespace Rare {
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;//the use of the images in this swapchain is to be directly rendered to
 
 		QueueFamilyIndices indices = _findQueueFamilies(_physicalDevice);
-		uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentationFamily.value() };
+		uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value, indices.presentationFamily.value };
 
-		if (indices.graphicsFamily != indices.presentationFamily) {
+		if (indices.graphicsFamily.value != indices.presentationFamily.value) {
 			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 			createInfo.queueFamilyIndexCount = 2;
 			createInfo.pQueueFamilyIndices = queueFamilyIndices;
-		}
-		else {
+		} else {
 			createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;//performant option. images are owned by one queue family at a time
 			createInfo.queueFamilyIndexCount = 0;
 			createInfo.pQueueFamilyIndices = nullptr;
@@ -719,7 +766,7 @@ namespace Rare {
 			deltaFPS = 0;
 		}
 		vkWaitForFences(_logicalDevice, 1, &_f_inFlight[_currentFrame], VK_TRUE, UINT64_MAX);
-		
+
 
 		uint32_t imageIndex;
 		VkResult acquireResult = vkAcquireNextImageKHR(_logicalDevice, _swapChain, UINT64_MAX, _s_imageAvailable[_currentFrame], VK_NULL_HANDLE, &imageIndex);
@@ -732,7 +779,7 @@ namespace Rare {
 			RARE_FATAL("Swap chain image couldn't be presented");
 		}
 		//check if previous frame is using this image
-		if(_f_imagesInFlight[imageIndex] != VK_NULL_HANDLE)
+		if (_f_imagesInFlight[imageIndex] != VK_NULL_HANDLE)
 			vkWaitForFences(_logicalDevice, 1, &_f_imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
 		//mark image as being used by current frame
 		_f_imagesInFlight[imageIndex] = _f_inFlight[_currentFrame];
@@ -908,7 +955,7 @@ namespace Rare {
 
 		if (_physicalDevice == VK_NULL_HANDLE) RARE_FATAL("Couldn't find a physical device");
 
-		
+
 
 	}
 
@@ -922,11 +969,16 @@ namespace Rare {
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 		int index = 0;
 		for (const VkQueueFamilyProperties& queueFamily : queueFamilies) {
-			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-				indices.graphicsFamily = index;
+			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+				indices.graphicsFamily.value = index;
+				indices.graphicsFamily.has_value = true;
+			}
 			VkBool32 presentSupport = false;
 			vkGetPhysicalDeviceSurfaceSupportKHR(device, index, _surface, &presentSupport);
-			if (presentSupport) indices.presentationFamily = index; //same queue family 
+			if (presentSupport) {
+				indices.presentationFamily.value = index; //same queue family 
+				indices.presentationFamily.has_value = true; //same queue family 
+			}
 			if (indices.isComplete())
 				break;
 			index++;
@@ -1131,7 +1183,7 @@ namespace Rare {
 	}
 
 	void RareCore::_recreateSwapChain() {
-		
+
 		/*This code checks for width/height to be 0 (i.e. the window is minimized) and then waits for it to not be minimized*/
 		int currentFrameWidth = 0, currentFrameHeight = 0;
 		glfwGetFramebufferSize(_windowRef, &currentFrameWidth, &currentFrameHeight);
@@ -1143,19 +1195,19 @@ namespace Rare {
 
 
 		/*Being swap chain recreation*/
-		 vkDeviceWaitIdle(_logicalDevice);
-		
-		 _cleanupSwapChain();
+		vkDeviceWaitIdle(_logicalDevice);
 
-		 _createSwapChain();
-		 _createImageViews(); 
-		 _createRenderPass(); //depends on format of swap chain images
-		 _createGraphicsPipeline();
-		 _createFramebuffers();
-		 _createUniformBuffers();
-		 _createDescriptorPool();
-		 _createDescriptorSets();
-		 _createCommandBuffers();
+		_cleanupSwapChain();
+
+		_createSwapChain();
+		_createImageViews();
+		_createRenderPass(); //depends on format of swap chain images
+		_createGraphicsPipeline();
+		_createFramebuffers();
+		_createUniformBuffers();
+		_createDescriptorPool();
+		_createDescriptorSets();
+		_createCommandBuffers();
 
 
 	}
@@ -1184,7 +1236,7 @@ namespace Rare {
 		fShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		fShaderStageInfo.module = fShaderMod;
 		fShaderStageInfo.pName = "main";
-		
+
 		VkPipelineShaderStageCreateInfo shaderStages[] = { vShaderStageInfo, fShaderStageInfo };
 
 
@@ -1199,7 +1251,7 @@ namespace Rare {
 		vInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
 		vInputInfo.pVertexBindingDescriptions = &bindingDescription;//vertex binding descriptions specify space between data and if data is per vert or per instance
 		vInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();//vertex attribute descriptions specify the attribute types and binding location of attributes that get passed to the vert shader
-		
+
 		VkPipelineInputAssemblyStateCreateInfo inputAssenblyInfo{};
 		inputAssenblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 		inputAssenblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -1346,7 +1398,7 @@ namespace Rare {
 		_swapChainFramebuffers.resize(_swapChainImageViews.size());
 		for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
 			VkImageView attachments[] = { _swapChainImageViews[i] };
-			
+
 			VkFramebufferCreateInfo framebufferInfo{};
 			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			framebufferInfo.renderPass = _renderPass;
@@ -1356,9 +1408,9 @@ namespace Rare {
 			framebufferInfo.height = _swapChainExtent.height;
 			framebufferInfo.layers = 1;
 
-			if (vkCreateFramebuffer(_logicalDevice, &framebufferInfo, nullptr, &_swapChainFramebuffers[i]) != VK_SUCCESS) 
+			if (vkCreateFramebuffer(_logicalDevice, &framebufferInfo, nullptr, &_swapChainFramebuffers[i]) != VK_SUCCESS)
 				RARE_FATAL("Couldn't create framebuffer");
-			
+
 		}
 	}
 
@@ -1367,14 +1419,14 @@ namespace Rare {
 
 		VkCommandPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		poolInfo.queueFamilyIndex = qFamIndices.graphicsFamily.value();
+		poolInfo.queueFamilyIndex = qFamIndices.graphicsFamily.value;
 		poolInfo.flags = 0;
 		if (vkCreateCommandPool(_logicalDevice, &poolInfo, nullptr, &_commandPool) != VK_SUCCESS) {
 			RARE_FATAL("Couldn't create Command Pool");
 		}
 		RARE_LOG("Command pool for graphics	queue family created");
 	}
-	
+
 	void RareCore::_createCommandBuffers() {
 		_commandBuffers.resize(_swapChainFramebuffers.size());
 
@@ -1471,7 +1523,7 @@ namespace Rare {
 		}
 		RARE_DEBUG("Created debug messenger");
 	}
-	
+
 	bool RareCore::_checkValidationLayerSupport() {
 		uint32_t layerCount;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -1520,6 +1572,6 @@ namespace Rare {
 			func(instance, debugMessenger, pAllocator);
 		}
 	}
-	
+
 
 }
