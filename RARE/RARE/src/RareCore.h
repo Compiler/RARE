@@ -18,7 +18,7 @@
 
 
 
-#define FPS_COUNTER_LOGGED 1
+#define FPS_COUNTER_LOGGED 0
 namespace Rare {
 
 	template<typename T> struct Optional {
@@ -34,6 +34,7 @@ namespace Rare {
 	struct VertexData {
 		glm::vec3 position;
 		glm::vec3 color;
+		glm::vec2 texCoord;
 
 		static VkVertexInputBindingDescription getBindingDescription() {
 			VkVertexInputBindingDescription bindingDescription{};
@@ -43,8 +44,8 @@ namespace Rare {
 			return bindingDescription;
 		}
 
-		static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
-			std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+		static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
+			std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
 			attributeDescriptions[0].binding = 0;
 			attributeDescriptions[0].location = 0;
 			attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
@@ -54,6 +55,11 @@ namespace Rare {
 			attributeDescriptions[1].location = 1;
 			attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
 			attributeDescriptions[1].offset = offsetof(VertexData, color);
+
+			attributeDescriptions[2].binding = 0;
+			attributeDescriptions[2].location = 2;
+			attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+			attributeDescriptions[2].offset = offsetof(VertexData, texCoord);
 
 			return attributeDescriptions;
 		}
@@ -69,14 +75,12 @@ namespace Rare {
 
 	private:
 
-		static constexpr float a = 2.75f;
+		static constexpr float a = 0.75f;
 		const std::vector<VertexData> _vertices = {
-							{{ a, -a, 0.0f}, {0.0, 0.0, 1.0}},	//0
-							{{-a,  a, 0.0f}, {0.0, 1.0, 0.0}},	//1
-							{{-a, -a, 0.0f}, {1.0, 0.0, 0.0}},	//2
-							{{ a,  a, 0.0f}, {1.0, 0.0, 0.0}},	//3
-							{{-a,  a, 0.0f}, {0.0, 1.0, 0.0}},	//1
-							{{ a, -a, 0.0f}, {0.0, 0.0, 1.0}}	//0
+							{{ a, -a, 0.0f}, {0.0, 0.0, 1.0}, {1.0f, 0.0f}},	//0
+							{{-a,  a, 0.0f}, {0.0, 1.0, 0.0}, {0.0f, 1.0f}},	//1
+							{{-a, -a, 0.0f}, {1.0, 0.0, 0.0}, {0.0f, 0.0f}},	//2
+							{{ a,  a, 0.0f}, {1.0, 0.0, 0.0}, {1.0f, 1.0f}}	//3
 		};
 		const std::vector<uint32_t> _indices = { 0,1,2,3,1,0 };
 
