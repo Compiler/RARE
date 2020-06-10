@@ -190,6 +190,7 @@ namespace Rare {
 
 	void RareCore::_copyBufferToImage(VkBuffer buff, VkImage img, uint32_t width, uint32_t height) {
 		VkCommandBuffer cbuff = _beginOneoffCommands();
+		RARE_DEBUG("Began one time command");
 
 		VkBufferImageCopy region{};
 		region.bufferOffset = 0;
@@ -199,17 +200,22 @@ namespace Rare {
 		region.imageSubresource.mipLevel = 0;
 		region.imageSubresource.baseArrayLayer = 0;
 		region.imageSubresource.layerCount = 1;
+		RARE_DEBUG("Created Buffer image copy region");
 
 		region.imageOffset = { 0, 0, 0 };
 		region.imageExtent = { width, height, 1 };
 
 		vkCmdCopyBufferToImage(cbuff, buff, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+		RARE_DEBUG("send cmd to coppy buffer to image");
 
 		_endOneoffCommands(cbuff);
+		RARE_DEBUG("Ended one time command");
+
 	}
 
 	void RareCore::_transitionImageLayout(VkImage img, VkFormat fmt, VkImageLayout olay, VkImageLayout nlay) {
 		VkCommandBuffer cbt = _beginOneoffCommands();//cbt stands for "command buffer : transition" 
+		RARE_DEBUG("Began one time command");
 
 		VkImageMemoryBarrier barrier{};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -225,6 +231,7 @@ namespace Rare {
 		barrier.subresourceRange.layerCount = 1;
 		barrier.srcAccessMask = 0;
 		barrier.dstAccessMask = 0;
+		RARE_DEBUG("Created VkImageMemoryBarrier");
 
 		VkPipelineStageFlags srcStage, dstStage;
 
@@ -236,13 +243,14 @@ namespace Rare {
 			dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 		} else if (olay == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && nlay == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
 			srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 			dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 		} else {
 			RARE_FATAL("unsupported layout transition");
 		}
+		RARE_DEBUG("Set properties");
 
 		vkCmdPipelineBarrier(cbt,
 			srcStage, dstStage,   //pipeline stage flags  (wait for this stage to finish), (these stages wait for you to finish)
@@ -250,8 +258,12 @@ namespace Rare {
 			0, nullptr,				//memory barrier
 			0, nullptr,				//buffer memory barrier
 			1, &barrier);			//image memory barrier
+		RARE_DEBUG("send cmd PipelineBarrier");
 
 		_endOneoffCommands(cbt);
+		RARE_DEBUG("Ended one time command");
+
+
 	}
 
 	VkCommandBuffer RareCore::_beginOneoffCommands() {
@@ -307,7 +319,9 @@ namespace Rare {
 		//map pixels from loadImage to buffer
 		void* data;
 		vkMapMemory(_logicalDevice, stagingBufferMemory, 0, imageSize, 0, &data);
+		memcpy(data, pixels, static_cast<size_t>(imageSize));
 		vkUnmapMemory(_logicalDevice, stagingBufferMemory);
+		FileLoaderFactory::free(pixels);
 
 		_createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
 			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _textureImage, _textureImageMemory);
@@ -321,7 +335,6 @@ namespace Rare {
 
 		vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
 		vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
-		FileLoaderFactory::free(pixels);
 
 	}
 
@@ -1318,7 +1331,7 @@ namespace Rare {
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
 		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;//VK_CULL_MODE_NONE
-		rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;//Vertex winding order
+		rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE ;//Vertex winding order
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f;
 		rasterizer.depthBiasClamp = 0.0f;
