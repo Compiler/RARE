@@ -161,6 +161,7 @@ namespace Rare {
 		std::vector<VkDescriptorSet> _descriptorSets;
 
 		//texture data
+		uint32_t _mipLevels;
 		VkImage _textureImage;
 		VkDeviceMemory _textureImageMemory;
 		VkImageView _textureImageView;
@@ -170,6 +171,7 @@ namespace Rare {
 		VkImage _depthImage;
 		VkDeviceMemory _depthImageMemory;
 		VkImageView _depthImageView;
+
 
 		void _createVkInstance();
 		void _createSurface();
@@ -197,10 +199,10 @@ namespace Rare {
 		void _createTextureSampler();
 		void _createDepthResources();
 		void _loadModel();
-		VkImageView _createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+		VkImageView _createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
 		void _copyBufferToImage(VkBuffer buff, VkImage img, uint32_t width, uint32_t height);
-		void _transitionImageLayout(VkImage img, VkFormat fmt, VkImageLayout olay, VkImageLayout nlay);
-		void _createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+		void _transitionImageLayout(VkImage img, VkFormat fmt, VkImageLayout olay, VkImageLayout nlay, uint32_t mipLevels);
+		void _createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, uint32_t mipLevels);
 		void _createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 		void _copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
 

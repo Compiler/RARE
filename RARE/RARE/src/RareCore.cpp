@@ -159,8 +159,8 @@ namespace Rare {
 
 	void RareCore::_createDepthResources() {
 		VkFormat depthFormat = _findDepthFormat();
-		_createImage(_swapChainExtent.width, _swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _depthImage, _depthImageMemory);
-		_depthImageView = _createImageView(_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+		_createImage(_swapChainExtent.width, _swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _depthImage, _depthImageMemory, 1);
+		_depthImageView = _createImageView(_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 		//TODO: Consider Explicitly transitioning the depth image to a depth attachment
 	}
 
@@ -178,7 +178,7 @@ namespace Rare {
 		RARE_FATAL("failed to find supported format!");
 	}
 
-	VkImageView RareCore::_createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
+	VkImageView RareCore::_createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels) {
 		VkImageViewCreateInfo viewInfo{};
 		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		viewInfo.image = image;
@@ -186,7 +186,7 @@ namespace Rare {
 		viewInfo.format = format;
 		viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		viewInfo.subresourceRange.baseMipLevel = 0;
-		viewInfo.subresourceRange.levelCount = 1;
+		viewInfo.subresourceRange.levelCount = mipLevels;
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount = 1;
 		viewInfo.subresourceRange.aspectMask = aspectFlags;
@@ -199,7 +199,7 @@ namespace Rare {
 		return imageView;
 	}
 	void RareCore::_createTextureImageView() {
-		_textureImageView = _createImageView(_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+		_textureImageView = _createImageView(_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, _mipLevels);
 	}
 
 	void RareCore::_loadModel() {
@@ -283,7 +283,7 @@ namespace Rare {
 
 	}
 
-	void RareCore::_transitionImageLayout(VkImage img, VkFormat fmt, VkImageLayout olay, VkImageLayout nlay) {
+	void RareCore::_transitionImageLayout(VkImage img, VkFormat fmt, VkImageLayout olay, VkImageLayout nlay, uint32_t mipLevels) {
 		VkCommandBuffer cbt = _beginOneoffCommands();//cbt stands for "command buffer : transition" 
 		RARE_DEBUG("Began one time command");
 
@@ -296,7 +296,7 @@ namespace Rare {
 		barrier.image = img;
 		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		barrier.subresourceRange.baseMipLevel = 0;
-		barrier.subresourceRange.levelCount = 1;
+		barrier.subresourceRange.levelCount = mipLevels;
 		barrier.subresourceRange.baseArrayLayer = 0;
 		barrier.subresourceRange.layerCount = 1;
 		barrier.srcAccessMask = 0;
@@ -377,7 +377,7 @@ namespace Rare {
 		int texWidth, texHeight, texChannels;
 		unsigned char* pixels = FileLoaderFactory::loadImage(_TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels);
 		VkDeviceSize imageSize = texWidth * texHeight * 4;
-
+		_mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
 		if (!pixels) {
 			RARE_FATAL("Failed to load texture image");
 		}
@@ -394,13 +394,13 @@ namespace Rare {
 		FileLoaderFactory::free(pixels);
 
 		_createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
-			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _textureImage, _textureImageMemory);
+			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _textureImage, _textureImageMemory, _mipLevels);
 		RARE_DEBUG("Created image");
-		_transitionImageLayout(_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		_transitionImageLayout(_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _mipLevels);
 		RARE_DEBUG("Transitioned image layout image");
 		_copyBufferToImage(stagingBuffer, _textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
 		RARE_DEBUG("Coppied buffer to  image");
-		_transitionImageLayout(_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		_transitionImageLayout(_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _mipLevels);
 		RARE_DEBUG("Transitioned image layout image");
 
 		vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
@@ -408,14 +408,14 @@ namespace Rare {
 
 	}
 
-	void RareCore::_createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
+	void RareCore::_createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, uint32_t mipLevels) {
 		VkImageCreateInfo imageInfo{};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		imageInfo.imageType = VK_IMAGE_TYPE_2D;
 		imageInfo.extent.width = static_cast<uint32_t>(width);
 		imageInfo.extent.height = static_cast<uint32_t>(height);
 		imageInfo.extent.depth = 1;
-		imageInfo.mipLevels = 1;
+		imageInfo.mipLevels = mipLevels;
 		imageInfo.arrayLayers = 1;
 		imageInfo.format = format;//potentially not supported by all graphics hardware. keep an eye on this for multiplat building
 		imageInfo.tiling = tiling;
@@ -1192,7 +1192,7 @@ namespace Rare {
 	void RareCore::_createImageViews() {
 		_swapChainImageViews.resize(_swapChainImages.size());
 		for (int i = 0; i < _swapChainImages.size(); i++) {
-			_swapChainImageViews[i] = _createImageView(_swapChainImages[i], _swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+			_swapChainImageViews[i] = _createImageView(_swapChainImages[i], _swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 		}
 	}
 
