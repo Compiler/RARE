@@ -138,6 +138,10 @@
     <Image Include="resources\textures\graymarble.jpg" />
     <Image Include="resources\textures\simple.png" />
     <Image Include="resources\textures\simple_normal.png" />
+    <Image Include="resources\textures\viking_room.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="resources\models\viking_room.obj" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
