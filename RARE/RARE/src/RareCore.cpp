@@ -101,6 +101,10 @@ namespace Rare {
 		_createCommandPool();
 		RARE_LOG("Create Command Pool:\t\t Initialization complete\n");
 		
+		RARE_LOG("Create Color Resources:\t\t Begin init");
+		_createColorResources();
+		RARE_LOG("Create Color Resources:\t\t Initialization complete\n");
+
 		RARE_LOG("Create Depth Resources:\t\t Begin init");
 		_createDepthResources();
 		RARE_LOG("Create Depth Resources:\t\t Initialization complete\n");
@@ -157,6 +161,13 @@ namespace Rare {
 		RARE_LOG("Initialization complete");
 	}
 
+
+	void RareCore::_createColorResources() {
+		VkFormat colorFormat = _swapChainImageFormat;
+
+		_createImage(_swapChainExtent.width, _swapChainExtent.height, colorFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _colorImage, _colorImageMemory, 1, _msaaSamples);
+		_colorImageView = _createImageView(_colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+	}
 
 	void RareCore::_generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) {
 		VkFormatProperties formatProperties;
@@ -245,7 +256,8 @@ namespace Rare {
 	}
 	void RareCore::_createDepthResources() {
 		VkFormat depthFormat = _findDepthFormat();
-		_createImage(_swapChainExtent.width, _swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _depthImage, _depthImageMemory, 1);
+		_createImage(_swapChainExtent.width, _swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+										_depthImage, _depthImageMemory, 1, _msaaSamples);
 		_depthImageView = _createImageView(_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 		//TODO: Consider Explicitly transitioning the depth image to a depth attachment
 	}
@@ -335,7 +347,7 @@ namespace Rare {
 		samplerInfo.compareEnable = VK_FALSE;
 		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-		samplerInfo.minLod = static_cast<float>(_mipLevels / 2); //set to 0 for normal rendering
+		samplerInfo.minLod = 0; //set to 0'static_cast<float>(_mipLevels / 2)' for normal rendering
 		samplerInfo.maxLod = static_cast<float>(_mipLevels);
 		samplerInfo.mipLodBias = 0.0f;
 
@@ -496,7 +508,8 @@ namespace Rare {
 
 	}
 
-	void RareCore::_createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, uint32_t mipLevels) {
+	void RareCore::_createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
+			VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, uint32_t mipLevels, VkSampleCountFlagBits numSamples) {
 		VkImageCreateInfo imageInfo{};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -510,7 +523,7 @@ namespace Rare {
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.usage = usage;
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+		imageInfo.samples = numSamples;
 		imageInfo.flags = 0;
 
 		if (vkCreateImage(_logicalDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
@@ -1149,12 +1162,12 @@ namespace Rare {
 		// Check if the best candidate is suitable at all
 		if (candidates.rbegin()->first > 0) {
 			_physicalDevice = candidates.rbegin()->second;
+			_msaaSamples = getMaxUsableSampleCount();
 			VkPhysicalDeviceProperties deviceProperties;
 			vkGetPhysicalDeviceProperties(_physicalDevice, &deviceProperties);
 			RARE_DEBUG("PhysicalDevice assigned to '{}'", deviceProperties.deviceName);
 		} else {
 			RARE_FATAL("failed to find a suitable GPU!");
-
 		}
 
 		if (_physicalDevice == VK_NULL_HANDLE) RARE_FATAL("Couldn't find a physical device");
@@ -1293,23 +1306,33 @@ namespace Rare {
 	void RareCore::_createRenderPass() {
 		VkAttachmentDescription colorAttachment{};
 		colorAttachment.format = _swapChainImageFormat;
-		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		colorAttachment.samples = _msaaSamples;
 		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;//VK_ATTACHMENT_LOAD_OP_LOAD
 		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		//colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		//colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;//layout used for images that are presented to the swapchain
+		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;//layout used for images that are presented to the swapchain
 
 		VkAttachmentDescription depthAttachment{};
 		depthAttachment.format = _findDepthFormat();
-		depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		depthAttachment.samples = _msaaSamples;
 		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+		VkAttachmentDescription colorAttachmentResolve{};
+		colorAttachmentResolve.format = _swapChainImageFormat;
+		colorAttachmentResolve.samples = VK_SAMPLE_COUNT_1_BIT;
+		colorAttachmentResolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachmentResolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 		//Create Subpasses
 		VkAttachmentReference colAttRef{};
@@ -1320,11 +1343,17 @@ namespace Rare {
 		depAttRef.attachment = 1;//index of attachment to reference
 		depAttRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;//layout used for images that are used as depth attachments
 
+		VkAttachmentReference colorAttachmentResolveRef{};
+		colorAttachmentResolveRef.attachment = 2;
+		colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+
 		VkSubpassDescription subpass{};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;//subpass bind for graphics rather than compute
 		subpass.colorAttachmentCount = 1;
 		subpass.pColorAttachments = &colAttRef;//referenced from fragment shader in the line "layout(location = 0) out vec4 outColor;"
 		subpass.pDepthStencilAttachment = &depAttRef;
+		subpass.pResolveAttachments = &colorAttachmentResolveRef;
 
 		VkSubpassDependency dependency{};
 		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -1335,7 +1364,7 @@ namespace Rare {
 		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
 		//Create Render Pass
-		std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
+		std::array<VkAttachmentDescription, 3> attachments = { colorAttachment, depthAttachment, colorAttachmentResolve };
 		VkRenderPassCreateInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 		renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
@@ -1353,6 +1382,9 @@ namespace Rare {
 
 	void RareCore::_cleanupSwapChain() {
 		RARE_LOG("Beginning cleaning of swap chain");
+		vkDestroyImageView(_logicalDevice, _colorImageView, nullptr);
+		vkDestroyImage(_logicalDevice, _colorImage, nullptr);
+		vkFreeMemory(_logicalDevice, _colorImageMemory, nullptr);
 		for (size_t i = 0; i < _swapChainFramebuffers.size(); i++) {
 
 			vkDestroyFramebuffer(_logicalDevice, _swapChainFramebuffers[i], nullptr);
@@ -1404,6 +1436,7 @@ namespace Rare {
 		_createImageViews();
 		_createRenderPass(); //depends on format of swap chain images
 		_createGraphicsPipeline();
+		_createColorResources();
 		_createDepthResources();
 		_createFramebuffers();
 		_createUniformBuffers();
@@ -1500,7 +1533,7 @@ namespace Rare {
 		VkPipelineMultisampleStateCreateInfo multisampler{};
 		multisampler.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 		multisampler.sampleShadingEnable = VK_FALSE;
-		multisampler.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+		multisampler.rasterizationSamples = _msaaSamples;
 		multisampler.minSampleShading = 1.0f;
 		multisampler.pSampleMask = nullptr;
 		multisampler.alphaToCoverageEnable = VK_FALSE;
@@ -1613,7 +1646,7 @@ namespace Rare {
 	void RareCore::_createFramebuffers() {
 		_swapChainFramebuffers.resize(_swapChainImageViews.size());
 		for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
-			std::array<VkImageView, 2> attachments = { _swapChainImageViews[i], _depthImageView };
+			std::array<VkImageView, 3> attachments = { _colorImageView, _depthImageView, _swapChainImageViews[i] };
 
 			VkFramebufferCreateInfo framebufferInfo{};
 			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
