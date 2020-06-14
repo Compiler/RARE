@@ -110,6 +110,7 @@
     <ClCompile Include="src\Tools\Logging\Logger.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\ECS\Registry.h" />
     <ClInclude Include="src\PhysicalDevices\DeviceOptions.h" />
     <ClInclude Include="src\Tools\FileLoaders\FileLoaderFactory.h" />
     <ClInclude Include="src\Tools\GLFWCallbacks.h" />
