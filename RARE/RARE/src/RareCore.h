@@ -199,6 +199,7 @@ namespace Rare {
 		void _createTextureSampler();
 		void _createDepthResources();
 		void _loadModel();
+		void _generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 		VkImageView _createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
 		void _copyBufferToImage(VkBuffer buff, VkImage img, uint32_t width, uint32_t height);
 		void _transitionImageLayout(VkImage img, VkFormat fmt, VkImageLayout olay, VkImageLayout nlay, uint32_t mipLevels);
