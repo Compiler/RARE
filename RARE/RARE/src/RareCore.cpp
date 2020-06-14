@@ -866,6 +866,7 @@ namespace Rare {
 
 		VkPhysicalDeviceFeatures deviceFeatures{};//specify which functionality we need -- come back later
 		deviceFeatures.samplerAnisotropy = VK_TRUE;
+		deviceFeatures.sampleRateShading = VK_TRUE;
 		VkDeviceCreateInfo createInfo{ };
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
@@ -1532,9 +1533,9 @@ namespace Rare {
 		//Multisanpling State Creation
 		VkPipelineMultisampleStateCreateInfo multisampler{};
 		multisampler.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampler.sampleShadingEnable = VK_FALSE;
+		multisampler.sampleShadingEnable = VK_TRUE;
 		multisampler.rasterizationSamples = _msaaSamples;
-		multisampler.minSampleShading = 1.0f;
+		multisampler.minSampleShading = 0.2f;
 		multisampler.pSampleMask = nullptr;
 		multisampler.alphaToCoverageEnable = VK_FALSE;
 		multisampler.alphaToOneEnable = VK_FALSE;
