@@ -1,4 +1,5 @@
 #include "GLFWCallbacks.h"
+#include "RareCore.h"
 
 
 void GLFWCallbacks::framebufferResizeCallback(GLFWwindow* window, int width, int height) {

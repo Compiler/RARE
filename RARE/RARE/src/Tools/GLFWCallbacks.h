@@ -1,6 +1,5 @@
 #pragma once
-#include <GLFW/glfw3.h>
-#include <RareCore.h>
+#include "RareCommon.h"
 #include <Tools/Input/InputManager.h>
 class GLFWCallbacks {
 

@@ -130,11 +130,11 @@ namespace Rare {
 		RARE_LOG("Load Model:\t\t Load complete\n");
 
 		RARE_LOG("Create Vertex Buffer:\t\t Begin init");
-		_createVertexBuffer();
+		BufferFactory::createVertexBuffer(_vkContext, _vertices, _vertexBuffer, _vertexBufferMemory);
 		RARE_LOG("Create Vertex Buffer:\t\t Initialization complete\n");
 
 		RARE_LOG("Create Index Buffer:\t\t Begin init");
-		_createIndexBuffer();
+		BufferFactory::createIndexBuffer(_vkContext, _indices, _indexBuffer, _indexBufferMemory);
 		RARE_LOG("Create Index Buffer:\t\t Initialization complete\n");
 
 		RARE_LOG("Create Uniform Buffer:\t\t Begin init");
@@ -171,13 +171,13 @@ namespace Rare {
 
 	void RareCore::_generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) {
 		VkFormatProperties formatProperties;
-		vkGetPhysicalDeviceFormatProperties(_physicalDevice, imageFormat, &formatProperties);
+		vkGetPhysicalDeviceFormatProperties(_vkContext.physicalDevice, imageFormat, &formatProperties);
 
 		if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
 			RARE_FATAL("texture image format does not support linear blitting!");
 		}
 
-		VkCommandBuffer commandBuffer = _beginOneoffCommands();
+		VkCommandBuffer commandBuffer = CmdBufferFactory::beginOneoffCommands(_vkContext);
 
 		VkImageMemoryBarrier barrier{};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -252,7 +252,7 @@ namespace Rare {
 			0, nullptr,
 			1, &barrier);
 
-		_endOneoffCommands(commandBuffer);
+		CmdBufferFactory::endOneoffCommands(_vkContext, commandBuffer);
 	}
 	void RareCore::_createDepthResources() {
 		VkFormat depthFormat = _findDepthFormat();
@@ -265,7 +265,7 @@ namespace Rare {
 	VkFormat  RareCore::_findSupportedBitFormats(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
 		for (VkFormat format : candidates) {
 			VkFormatProperties props;
-			vkGetPhysicalDeviceFormatProperties(_physicalDevice, format, &props);
+			vkGetPhysicalDeviceFormatProperties(_vkContext.physicalDevice, format, &props);
 
 			if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
 				return format;
@@ -290,7 +290,7 @@ namespace Rare {
 		viewInfo.subresourceRange.aspectMask = aspectFlags;
 
 		VkImageView imageView;
-		if (vkCreateImageView(_logicalDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+		if (vkCreateImageView(_vkContext.logicalDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
 			RARE_FATAL("failed to create texture image view!");
 		}
 
@@ -351,13 +351,13 @@ namespace Rare {
 		samplerInfo.maxLod = static_cast<float>(_mipLevels);
 		samplerInfo.mipLodBias = 0.0f;
 
-		if (vkCreateSampler(_logicalDevice, &samplerInfo, nullptr, &_textureSampler) != VK_SUCCESS) {
+		if (vkCreateSampler(_vkContext.logicalDevice, &samplerInfo, nullptr, &_textureSampler) != VK_SUCCESS) {
 			RARE_FATAL("failed to create texture sampler!");
 		}
 	}
 
 	void RareCore::_copyBufferToImage(VkBuffer buff, VkImage img, uint32_t width, uint32_t height) {
-		VkCommandBuffer cbuff = _beginOneoffCommands();
+		VkCommandBuffer cbuff = CmdBufferFactory::beginOneoffCommands(_vkContext);
 		RARE_DEBUG("Began one time command");
 
 		VkBufferImageCopy region{};
@@ -376,13 +376,13 @@ namespace Rare {
 		vkCmdCopyBufferToImage(cbuff, buff, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 		RARE_DEBUG("send cmd to coppy buffer to image");
 
-		_endOneoffCommands(cbuff);
+		CmdBufferFactory::endOneoffCommands(_vkContext, cbuff);
 		RARE_DEBUG("Ended one time command");
 
 	}
 
 	void RareCore::_transitionImageLayout(VkImage img, VkFormat fmt, VkImageLayout olay, VkImageLayout nlay, uint32_t mipLevels) {
-		VkCommandBuffer cbt = _beginOneoffCommands();//cbt stands for "command buffer : transition" 
+		VkCommandBuffer cbt = CmdBufferFactory::beginOneoffCommands(_vkContext);//cbt stands for "command buffer : transition" 
 		RARE_DEBUG("Began one time command");
 
 		VkImageMemoryBarrier barrier{};
@@ -428,47 +428,10 @@ namespace Rare {
 			1, &barrier);			//image memory barrier
 		RARE_DEBUG("send cmd PipelineBarrier");
 
-		_endOneoffCommands(cbt);
+		CmdBufferFactory::endOneoffCommands(_vkContext, cbt);
 		RARE_DEBUG("Ended one time command");
 
 
-	}
-
-	VkCommandBuffer RareCore::_beginOneoffCommands() {
-		VkCommandBufferAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.commandPool = _commandPool;
-		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandBufferCount = 1;
-
-		VkCommandBuffer cb;
-		if (vkAllocateCommandBuffers(_logicalDevice, &allocInfo, &cb) != VK_SUCCESS) {
-			RARE_FATAL("Could not allocate one-off command buffer");
-		}
-		VkCommandBufferBeginInfo beginInfo{};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-		vkBeginCommandBuffer(cb, &beginInfo);
-		return cb;
-	}
-
-	void RareCore::_endOneoffCommands(VkCommandBuffer cb) {
-		vkEndCommandBuffer(cb);
-		VkSubmitInfo sinfo{};
-		sinfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		sinfo.commandBufferCount = 1;
-		sinfo.pCommandBuffers = &cb;
-		vkQueueSubmit(_graphicsQueue, 1, &sinfo, VK_NULL_HANDLE);
-		vkQueueWaitIdle(_graphicsQueue);
-		/*
-		There are again two possible ways to wait on this transfer to complete. We could use a fence and wait with vkWaitForFences,
-		or simply wait for the transfer queue to become idle with vkQueueWaitIdle.
-		A fence would allow you to schedule multiple transfers simultaneously and wait for all of them complete,
-		instead of executing one at a time. That may give the driver more opportunities to optimize.
-		*/
-
-		vkFreeCommandBuffers(_logicalDevice, _commandPool, 1, &cb);
 	}
 
 	void RareCore::_createTextureImage() {
@@ -482,13 +445,13 @@ namespace Rare {
 
 		VkBuffer stagingBuffer;
 		VkDeviceMemory stagingBufferMemory;
-		_createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+		BufferFactory::createBuffer(_vkContext, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
 		//map pixels from loadImage to buffer
 		void* data;
-		vkMapMemory(_logicalDevice, stagingBufferMemory, 0, imageSize, 0, &data);
+		vkMapMemory(_vkContext.logicalDevice, stagingBufferMemory, 0, imageSize, 0, &data);
 		memcpy(data, pixels, static_cast<size_t>(imageSize));
-		vkUnmapMemory(_logicalDevice, stagingBufferMemory);
+		vkUnmapMemory(_vkContext.logicalDevice, stagingBufferMemory);
 		FileLoaderFactory::free(pixels);
 
 		_createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
@@ -502,8 +465,8 @@ namespace Rare {
 		//RARE_DEBUG("Transitioned image layout image");
 
 
-		vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
-		vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
+		vkDestroyBuffer(_vkContext.logicalDevice, stagingBuffer, nullptr);
+		vkFreeMemory(_vkContext.logicalDevice, stagingBufferMemory, nullptr);
 		_generateMipmaps(_textureImage, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, _mipLevels);
 
 	}
@@ -526,23 +489,23 @@ namespace Rare {
 		imageInfo.samples = numSamples;
 		imageInfo.flags = 0;
 
-		if (vkCreateImage(_logicalDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+		if (vkCreateImage(_vkContext.logicalDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
 			RARE_FATAL("Failed to create image");
 		}
 
 		VkMemoryRequirements memRequirements;
-		vkGetImageMemoryRequirements(_logicalDevice, image, &memRequirements);
+		vkGetImageMemoryRequirements(_vkContext.logicalDevice, image, &memRequirements);
 
 		VkMemoryAllocateInfo aInfo{};
 		aInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		aInfo.allocationSize = memRequirements.size;
-		aInfo.memoryTypeIndex = _findMemoryType(memRequirements.memoryTypeBits, properties);
+		aInfo.memoryTypeIndex = BufferFactory::findMemoryType(_vkContext, memRequirements.memoryTypeBits, properties);
 
-		if (vkAllocateMemory(_logicalDevice, &aInfo, nullptr, &imageMemory) != VK_SUCCESS) {
+		if (vkAllocateMemory(_vkContext.logicalDevice, &aInfo, nullptr, &imageMemory) != VK_SUCCESS) {
 			RARE_FATAL("Failed to allocate image memory");
 		}
 
-		vkBindImageMemory(_logicalDevice, image, imageMemory, 0);
+		vkBindImageMemory(_vkContext.logicalDevice, image, imageMemory, 0);
 	}
 
 	void RareCore::_createDescriptorSets() {
@@ -554,7 +517,7 @@ namespace Rare {
 		allocInfo.pSetLayouts = layouts.data();
 
 		_descriptorSets.resize(_swapChainImages.size());
-		if (vkAllocateDescriptorSets(_logicalDevice, &allocInfo, _descriptorSets.data()) != VK_SUCCESS) {
+		if (vkAllocateDescriptorSets(_vkContext.logicalDevice, &allocInfo, _descriptorSets.data()) != VK_SUCCESS) {
 			RARE_FATAL("Failed to allocate descriptor sets");
 		}
 
@@ -589,7 +552,7 @@ namespace Rare {
 			descriptorWrites[1].descriptorCount = 1;
 			descriptorWrites[1].pImageInfo = &imageInfo;
 
-			vkUpdateDescriptorSets(_logicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+			vkUpdateDescriptorSets(_vkContext.logicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 		}
 
 
@@ -613,7 +576,7 @@ namespace Rare {
 		poolInfo.pPoolSizes = poolSizes.data();
 		poolInfo.maxSets = static_cast<uint32_t>(_swapChainImages.size());
 
-		if (vkCreateDescriptorPool(_logicalDevice, &poolInfo, nullptr, &_descriptorPool) != VK_SUCCESS) {
+		if (vkCreateDescriptorPool(_vkContext.logicalDevice, &poolInfo, nullptr, &_descriptorPool) != VK_SUCCESS) {
 			RARE_FATAL("Failed to create descriptor pool");
 		}
 	}
@@ -628,9 +591,9 @@ namespace Rare {
 		ubo.proj[1][1] *= -1;
 		ubo.time = time;
 		void* data;
-		vkMapMemory(_logicalDevice, _uniformBuffersMemory[imageIndex], 0, sizeof(ubo), 0, &data);
+		vkMapMemory(_vkContext.logicalDevice, _uniformBuffersMemory[imageIndex], 0, sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
-		vkUnmapMemory(_logicalDevice, _uniformBuffersMemory[imageIndex]);
+		vkUnmapMemory(_vkContext.logicalDevice, _uniformBuffersMemory[imageIndex]);
 
 
 	}
@@ -643,7 +606,7 @@ namespace Rare {
 		_uniformBuffersMemory.resize(_swapChainImages.size());
 
 		for (size_t i = 0; i < _swapChainImages.size(); i++) {
-			_createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, _uniformBuffers[i], _uniformBuffersMemory[i]);
+			BufferFactory::createBuffer(_vkContext, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, _uniformBuffers[i], _uniformBuffersMemory[i]);
 		}
 	}
 
@@ -668,112 +631,10 @@ namespace Rare {
 		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 		layoutInfo.pBindings = bindings.data();
 
-		if (vkCreateDescriptorSetLayout(_logicalDevice, &layoutInfo, nullptr, &_descriptorSetLayout) != VK_SUCCESS) {
+		if (vkCreateDescriptorSetLayout(_vkContext.logicalDevice, &layoutInfo, nullptr, &_descriptorSetLayout) != VK_SUCCESS) {
 			RARE_FATAL("failed to create descriptor set layout");
 		}
 
-	}
-
-	void RareCore::_createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
-		VkBufferCreateInfo bufferInfo{};
-		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = size;
-		bufferInfo.usage = usage;
-		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		bufferInfo.flags = 0;
-		if (vkCreateBuffer(_logicalDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-			RARE_FATAL("failed to create buffer");
-		}
-
-
-		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(_logicalDevice, buffer, &memRequirements);
-		RARE_DEBUG("Needs {} bytes for buffer", memRequirements.size);
-
-		VkMemoryAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.allocationSize = memRequirements.size;
-		allocInfo.memoryTypeIndex = _findMemoryType(memRequirements.memoryTypeBits, properties);
-		if (vkAllocateMemory(_logicalDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-			RARE_FATAL("failed to allocate buffer memory");
-		}
-		vkBindBufferMemory(_logicalDevice, buffer, bufferMemory, 0);
-
-	}
-
-	void RareCore::_createIndexBuffer() {
-		VkDeviceSize bufferSize = sizeof(_indices[0]) * _indices.size();
-
-		VkBuffer stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
-
-		_createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);//staging buffer app side
-
-
-		void* data;
-		vkMapMemory(_logicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-		memcpy(data, _indices.data(), (size_t)bufferSize);
-		vkUnmapMemory(_logicalDevice, stagingBufferMemory);
-
-		_createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _indexBuffer, _indexBufferMemory);//Index buffer on gpu
-
-		_copyBuffer(stagingBuffer, _indexBuffer, bufferSize);
-
-		vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
-		vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
-	}
-
-	void RareCore::_createVertexBuffer() {
-		VkDeviceSize bufferSize = sizeof(_vertices[0]) * _vertices.size();
-
-		VkBuffer stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
-
-		_createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);//staging buffer app side
-
-
-		void* data;
-		vkMapMemory(_logicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-		memcpy(data, _vertices.data(), (size_t)bufferSize);
-		vkUnmapMemory(_logicalDevice, stagingBufferMemory);
-
-		_createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _vertexBuffer, _vertexBufferMemory);//vertex buffer on gpu
-
-		_copyBuffer(stagingBuffer, _vertexBuffer, bufferSize);
-
-		vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
-		vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
-	}
-
-	void RareCore::_copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size) {
-		/*
-		You may wish to create a separate command pool for these kinds of short-lived buffers,
-		because the implementation may be able to apply memory allocation optimizations.
-		You should use the VK_COMMAND_POOL_CREATE_TRANSIENT_BIT(tmp) flag during command pool generation in that case.
-		*/
-		VkCommandBuffer cbuff = _beginOneoffCommands();
-
-		VkBufferCopy copyRegion{};
-		copyRegion.srcOffset = 0;
-		copyRegion.dstOffset = 0;
-		copyRegion.size = size;
-		vkCmdCopyBuffer(cbuff, src, dst, 1, &copyRegion);
-
-		_endOneoffCommands(cbuff);
-
-	}
-
-	uint32_t RareCore::_findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-		VkPhysicalDeviceMemoryProperties memProperties;
-		vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memProperties);
-
-		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-			if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-				RARE_DEBUG("Using memory type '{}'", i);
-				return i;
-			}
-		}
-		RARE_FATAL("Couldn't find an applicable memory type");
 	}
 
 	void RareCore::_createVkInstance() {
@@ -829,7 +690,7 @@ namespace Rare {
 
 
 		//nullptr cuz no custom allocator rn
-		if (vkCreateInstance(&createInfo, nullptr, &_vkInstance) != VK_SUCCESS)
+		if (vkCreateInstance(&createInfo, nullptr, &(_vkContext.vkInstance)) != VK_SUCCESS)
 			RARE_FATAL("Failed to create vkInstance");
 
 
@@ -841,13 +702,13 @@ namespace Rare {
 	}
 
 	void RareCore::_createSurface() {
-		if (glfwCreateWindowSurface(_vkInstance, _windowRef, nullptr, &_surface) != VK_SUCCESS) {
+		if (glfwCreateWindowSurface(_vkContext.vkInstance, _windowRef, nullptr, &_surface) != VK_SUCCESS) {
 			RARE_FATAL("Couldn't create window surface");
 		}
 	}
 
 	void RareCore::_createLogicalDevice() {
-		QueueFamilyIndices indices = _findQueueFamilies(_physicalDevice);//find queue families for graphics and presentation
+		QueueFamilyIndices indices = _findQueueFamilies(_vkContext.physicalDevice);//find queue families for graphics and presentation
 		if (!indices.isComplete()) RARE_WARN("Returned queues do not sufficiently cover the command requirements");
 
 		VkDeviceQueueCreateInfo queueCreateInfo{};
@@ -881,15 +742,15 @@ namespace Rare {
 		} else
 			createInfo.enabledLayerCount = 0;
 
-		if (vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_logicalDevice) != VK_SUCCESS) RARE_FATAL("Couldn't create logical device");
+		if (vkCreateDevice(_vkContext.physicalDevice, &createInfo, nullptr, &(_vkContext.logicalDevice)) != VK_SUCCESS) RARE_FATAL("Couldn't create logical device");
 
-		vkGetDeviceQueue(_logicalDevice, indices.presentationFamily.value, 0, &_presentationQueue);
-		vkGetDeviceQueue(_logicalDevice, indices.graphicsFamily.value, 0, &_graphicsQueue);
+		vkGetDeviceQueue(_vkContext.logicalDevice, indices.presentationFamily.value, 0, &_presentationQueue);
+		vkGetDeviceQueue(_vkContext.logicalDevice, indices.graphicsFamily.value, 0, &(_vkContext.graphicsQueue));
 
 	}
 
 	void RareCore::_createSwapChain() {
-		SwapChainSupportDetails swapChainSupport = _querySwapChainSupport(_physicalDevice);
+		SwapChainSupportDetails swapChainSupport = _querySwapChainSupport(_vkContext.physicalDevice);
 
 		VkSurfaceFormatKHR surfaceFormat = _chooseSwapSurfaceFormat(swapChainSupport.formats);
 		VkPresentModeKHR presentMode = _chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -911,7 +772,7 @@ namespace Rare {
 		createInfo.imageArrayLayers = 1;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;//the use of the images in this swapchain is to be directly rendered to
 
-		QueueFamilyIndices indices = _findQueueFamilies(_physicalDevice);
+		QueueFamilyIndices indices = _findQueueFamilies(_vkContext.physicalDevice);
 		uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value, indices.presentationFamily.value };
 
 		if (indices.graphicsFamily.value != indices.presentationFamily.value) {
@@ -931,14 +792,14 @@ namespace Rare {
 		createInfo.oldSwapchain = VK_NULL_HANDLE;
 
 		//create swapchain
-		if (vkCreateSwapchainKHR(_logicalDevice, &createInfo, nullptr, &_swapChain) != VK_SUCCESS) {
+		if (vkCreateSwapchainKHR(_vkContext.logicalDevice, &createInfo, nullptr, &_swapChain) != VK_SUCCESS) {
 			RARE_FATAL("Failed to create Swap Chain!");
 		}
 
 		//store swap chain image handles in _swapChainImages
-		vkGetSwapchainImagesKHR(_logicalDevice, _swapChain, &imageCount, nullptr);
+		vkGetSwapchainImagesKHR(_vkContext.logicalDevice, _swapChain, &imageCount, nullptr);
 		_swapChainImages.resize(imageCount);
-		vkGetSwapchainImagesKHR(_logicalDevice, _swapChain, &imageCount, _swapChainImages.data());
+		vkGetSwapchainImagesKHR(_vkContext.logicalDevice, _swapChain, &imageCount, _swapChainImages.data());
 
 		//store information about swap chain images for later use
 		_swapChainImageFormat = surfaceFormat.format;
@@ -980,11 +841,11 @@ namespace Rare {
 			frameCount = 0; startFPS = glfwGetTime();
 			deltaFPS = 0;
 		}
-		vkWaitForFences(_logicalDevice, 1, &_f_inFlight[_currentFrame], VK_TRUE, UINT64_MAX);
+		vkWaitForFences(_vkContext.logicalDevice, 1, &_f_inFlight[_currentFrame], VK_TRUE, UINT64_MAX);
 
 
 		uint32_t imageIndex;
-		VkResult acquireResult = vkAcquireNextImageKHR(_logicalDevice, _swapChain, UINT64_MAX, _s_imageAvailable[_currentFrame], VK_NULL_HANDLE, &imageIndex);
+		VkResult acquireResult = vkAcquireNextImageKHR(_vkContext.logicalDevice, _swapChain, UINT64_MAX, _s_imageAvailable[_currentFrame], VK_NULL_HANDLE, &imageIndex);
 		/*This result means that the swap chain is no longer in a condition sufficient enough to continue using(something changed)*/
 		if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR || acquireResult == VK_SUBOPTIMAL_KHR || framebufferResized) {
 			framebufferResized = false;
@@ -995,7 +856,7 @@ namespace Rare {
 		}
 		//check if previous frame is using this image
 		if (_f_imagesInFlight[imageIndex] != VK_NULL_HANDLE)
-			vkWaitForFences(_logicalDevice, 1, &_f_imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+			vkWaitForFences(_vkContext.logicalDevice, 1, &_f_imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
 		//mark image as being used by current frame
 		_f_imagesInFlight[imageIndex] = _f_inFlight[_currentFrame];
 
@@ -1014,9 +875,9 @@ namespace Rare {
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = s_signal;
 
-		vkResetFences(_logicalDevice, 1, &_f_inFlight[_currentFrame]);
+		vkResetFences(_vkContext.logicalDevice, 1, &_f_inFlight[_currentFrame]);
 
-		if (vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _f_inFlight[_currentFrame]) != VK_SUCCESS)
+		if (vkQueueSubmit(_vkContext.graphicsQueue, 1, &submitInfo, _f_inFlight[_currentFrame]) != VK_SUCCESS)
 			RARE_FATAL("Could not submit draw command buffer");
 
 		VkPresentInfoKHR presentInfo{};
@@ -1037,41 +898,41 @@ namespace Rare {
 	}
 
 	void RareCore::waitIdle() {
-		vkDeviceWaitIdle(_logicalDevice);
+		vkDeviceWaitIdle(_vkContext.logicalDevice);
 	}
 
 	void RareCore::dispose() {
 		_cleanupSwapChain();
 
-		vkDestroyImageView(_logicalDevice, _textureImageView, nullptr);
+		vkDestroyImageView(_vkContext.logicalDevice, _textureImageView, nullptr);
 
-		vkDestroyImage(_logicalDevice, _textureImage, nullptr);
-		vkFreeMemory(_logicalDevice, _textureImageMemory, nullptr);
+		vkDestroyImage(_vkContext.logicalDevice, _textureImage, nullptr);
+		vkFreeMemory(_vkContext.logicalDevice, _textureImageMemory, nullptr);
 
-		vkDestroyDescriptorSetLayout(_logicalDevice, _descriptorSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(_vkContext.logicalDevice, _descriptorSetLayout, nullptr);
 
-		vkDestroyBuffer(_logicalDevice, _indexBuffer, nullptr);
-		vkFreeMemory(_logicalDevice, _indexBufferMemory, nullptr);
-		vkDestroyBuffer(_logicalDevice, _vertexBuffer, nullptr);
-		vkFreeMemory(_logicalDevice, _vertexBufferMemory, nullptr);
+		vkDestroyBuffer(_vkContext.logicalDevice, _indexBuffer, nullptr);
+		vkFreeMemory(_vkContext.logicalDevice, _indexBufferMemory, nullptr);
+		vkDestroyBuffer(_vkContext.logicalDevice, _vertexBuffer, nullptr);
+		vkFreeMemory(_vkContext.logicalDevice, _vertexBufferMemory, nullptr);
 
 		for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {
-			vkDestroySemaphore(_logicalDevice, _s_imageAvailable[i], nullptr);
-			vkDestroySemaphore(_logicalDevice, _s_renderFinished[i], nullptr);
-			vkDestroyFence(_logicalDevice, _f_inFlight[i], nullptr);
+			vkDestroySemaphore(_vkContext.logicalDevice, _s_imageAvailable[i], nullptr);
+			vkDestroySemaphore(_vkContext.logicalDevice, _s_renderFinished[i], nullptr);
+			vkDestroyFence(_vkContext.logicalDevice, _f_inFlight[i], nullptr);
 
 		}
 
-		vkDestroyCommandPool(_logicalDevice, _commandPool, nullptr);
+		vkDestroyCommandPool(_vkContext.logicalDevice, _vkContext.commandPool, nullptr);
 
-		vkDestroyDevice(_logicalDevice, nullptr);
+		vkDestroyDevice(_vkContext.logicalDevice, nullptr);
 
 		if (_enableValidationLayers) {
-			DestroyDebugUtilsMessengerEXT(_vkInstance, _debugMessenger, nullptr);
+			DestroyDebugUtilsMessengerEXT(_vkContext.vkInstance, _debugMessenger, nullptr);
 		}
 
-		vkDestroySurfaceKHR(_vkInstance, _surface, nullptr);
-		vkDestroyInstance(_vkInstance, nullptr);
+		vkDestroySurfaceKHR(_vkContext.vkInstance, _surface, nullptr);
+		vkDestroyInstance(_vkContext.vkInstance, nullptr);
 
 		glfwDestroyWindow(_windowRef);
 
@@ -1108,11 +969,11 @@ namespace Rare {
 
 	void RareCore::_pickPhysicalDevice() {
 		uint32_t deviceCount = 0;
-		vkEnumeratePhysicalDevices(_vkInstance, &deviceCount, nullptr);
+		vkEnumeratePhysicalDevices(_vkContext.vkInstance, &deviceCount, nullptr);
 		if (deviceCount == 0) RARE_FATAL("No PhysicalDevicesFound");
 		RARE_DEBUG("{} physical device(s) found", deviceCount);
 		std::vector<VkPhysicalDevice> devices(deviceCount);
-		vkEnumeratePhysicalDevices(_vkInstance, &deviceCount, devices.data());
+		vkEnumeratePhysicalDevices(_vkContext.vkInstance, &deviceCount, devices.data());
 
 		std::multimap<int, VkPhysicalDevice> candidates;
 
@@ -1162,16 +1023,16 @@ namespace Rare {
 
 		// Check if the best candidate is suitable at all
 		if (candidates.rbegin()->first > 0) {
-			_physicalDevice = candidates.rbegin()->second;
+			_vkContext.physicalDevice = candidates.rbegin()->second;
 			_msaaSamples = getMaxUsableSampleCount();
 			VkPhysicalDeviceProperties deviceProperties;
-			vkGetPhysicalDeviceProperties(_physicalDevice, &deviceProperties);
+			vkGetPhysicalDeviceProperties(_vkContext.physicalDevice, &deviceProperties);
 			RARE_DEBUG("PhysicalDevice assigned to '{}'", deviceProperties.deviceName);
 		} else {
 			RARE_FATAL("failed to find a suitable GPU!");
 		}
 
-		if (_physicalDevice == VK_NULL_HANDLE) RARE_FATAL("Couldn't find a physical device");
+		if (_vkContext.physicalDevice == VK_NULL_HANDLE) RARE_FATAL("Couldn't find a physical device");
 
 
 
@@ -1375,7 +1236,7 @@ namespace Rare {
 		renderPassInfo.dependencyCount = 1;
 		renderPassInfo.pDependencies = &dependency;
 
-		if (vkCreateRenderPass(_logicalDevice, &renderPassInfo, nullptr, &_renderPass) != VK_SUCCESS) {
+		if (vkCreateRenderPass(_vkContext.logicalDevice, &renderPassInfo, nullptr, &_renderPass) != VK_SUCCESS) {
 			RARE_FATAL("Failed to create render pass");
 		}
 
@@ -1383,34 +1244,34 @@ namespace Rare {
 
 	void RareCore::_cleanupSwapChain() {
 		RARE_LOG("Beginning cleaning of swap chain");
-		vkDestroyImageView(_logicalDevice, _colorImageView, nullptr);
-		vkDestroyImage(_logicalDevice, _colorImage, nullptr);
-		vkFreeMemory(_logicalDevice, _colorImageMemory, nullptr);
+		vkDestroyImageView(_vkContext.logicalDevice, _colorImageView, nullptr);
+		vkDestroyImage(_vkContext.logicalDevice, _colorImage, nullptr);
+		vkFreeMemory(_vkContext.logicalDevice, _colorImageMemory, nullptr);
 		for (size_t i = 0; i < _swapChainFramebuffers.size(); i++) {
 
-			vkDestroyFramebuffer(_logicalDevice, _swapChainFramebuffers[i], nullptr);
+			vkDestroyFramebuffer(_vkContext.logicalDevice, _swapChainFramebuffers[i], nullptr);
 		}
-		vkFreeCommandBuffers(_logicalDevice, _commandPool, static_cast<uint32_t>(_commandBuffers.size()), _commandBuffers.data());
+		vkFreeCommandBuffers(_vkContext.logicalDevice, _vkContext.commandPool, static_cast<uint32_t>(_commandBuffers.size()), _commandBuffers.data());
 
 
-		vkDestroyPipeline(_logicalDevice, _graphicsPipeline, nullptr);
-		vkDestroyPipelineLayout(_logicalDevice, _pipelineLayout, nullptr);
-		vkDestroyRenderPass(_logicalDevice, _renderPass, nullptr);
+		vkDestroyPipeline(_vkContext.logicalDevice, _graphicsPipeline, nullptr);
+		vkDestroyPipelineLayout(_vkContext.logicalDevice, _pipelineLayout, nullptr);
+		vkDestroyRenderPass(_vkContext.logicalDevice, _renderPass, nullptr);
 
-		vkDestroyImageView(_logicalDevice, _depthImageView, nullptr);
-		vkDestroyImage(_logicalDevice, _depthImage, nullptr);
-		vkFreeMemory(_logicalDevice, _depthImageMemory, nullptr);
+		vkDestroyImageView(_vkContext.logicalDevice, _depthImageView, nullptr);
+		vkDestroyImage(_vkContext.logicalDevice, _depthImage, nullptr);
+		vkFreeMemory(_vkContext.logicalDevice, _depthImageMemory, nullptr);
 		for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
-			vkDestroyImageView(_logicalDevice, _swapChainImageViews[i], nullptr);
+			vkDestroyImageView(_vkContext.logicalDevice, _swapChainImageViews[i], nullptr);
 		}
-		vkDestroySwapchainKHR(_logicalDevice, _swapChain, nullptr);
+		vkDestroySwapchainKHR(_vkContext.logicalDevice, _swapChain, nullptr);
 
 		for (size_t i = 0; i < _swapChainImages.size(); i++) {
-			vkDestroyBuffer(_logicalDevice, _uniformBuffers[i], nullptr);
-			vkFreeMemory(_logicalDevice, _uniformBuffersMemory[i], nullptr);
+			vkDestroyBuffer(_vkContext.logicalDevice, _uniformBuffers[i], nullptr);
+			vkFreeMemory(_vkContext.logicalDevice, _uniformBuffersMemory[i], nullptr);
 		}
 
-		vkDestroyDescriptorPool(_logicalDevice, _descriptorPool, nullptr);
+		vkDestroyDescriptorPool(_vkContext.logicalDevice, _descriptorPool, nullptr);
 
 		RARE_LOG("Ended cleaning of swap chain");
 
@@ -1429,7 +1290,7 @@ namespace Rare {
 
 
 		/*Being swap chain recreation*/
-		vkDeviceWaitIdle(_logicalDevice);
+		vkDeviceWaitIdle(_vkContext.logicalDevice);
 
 		_cleanupSwapChain();
 
@@ -1597,7 +1458,7 @@ namespace Rare {
 		pipelineLayoutInfo.pushConstantRangeCount = 0;
 		pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
-		if (vkCreatePipelineLayout(_logicalDevice, &pipelineLayoutInfo, nullptr, &_pipelineLayout) != VK_SUCCESS) {
+		if (vkCreatePipelineLayout(_vkContext.logicalDevice, &pipelineLayoutInfo, nullptr, &_pipelineLayout) != VK_SUCCESS) {
 			RARE_FATAL("Failed to create pipeline layout");
 		}
 
@@ -1622,12 +1483,12 @@ namespace Rare {
 		pipelineInfo.basePipelineIndex = -1;
 		pipelineInfo.pDepthStencilState = &depthStencil;
 
-		if (vkCreateGraphicsPipelines(_logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_graphicsPipeline) != VK_SUCCESS) {
+		if (vkCreateGraphicsPipelines(_vkContext.logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_graphicsPipeline) != VK_SUCCESS) {
 			RARE_FATAL("Failed to create graphics pipeline");
 		}
 
-		vkDestroyShaderModule(_logicalDevice, fShaderMod, nullptr);
-		vkDestroyShaderModule(_logicalDevice, vShaderMod, nullptr);
+		vkDestroyShaderModule(_vkContext.logicalDevice, fShaderMod, nullptr);
+		vkDestroyShaderModule(_vkContext.logicalDevice, vShaderMod, nullptr);
 	}
 
 	VkShaderModule RareCore::_createShaderModule(const std::vector<uint32_t>& code) {
@@ -1637,7 +1498,7 @@ namespace Rare {
 		createInfo.pCode = code.data();
 
 		VkShaderModule shaderModule;
-		if (vkCreateShaderModule(_logicalDevice, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+		if (vkCreateShaderModule(_vkContext.logicalDevice, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
 			RARE_FATAL("Couldn't create shader module");
 		}
 		return shaderModule;
@@ -1658,20 +1519,20 @@ namespace Rare {
 			framebufferInfo.height = _swapChainExtent.height;
 			framebufferInfo.layers = 1;
 
-			if (vkCreateFramebuffer(_logicalDevice, &framebufferInfo, nullptr, &_swapChainFramebuffers[i]) != VK_SUCCESS)
+			if (vkCreateFramebuffer(_vkContext.logicalDevice, &framebufferInfo, nullptr, &_swapChainFramebuffers[i]) != VK_SUCCESS)
 				RARE_FATAL("Couldn't create framebuffer");
 
 		}
 	}
 
 	void RareCore::_createCommandPool() {
-		QueueFamilyIndices qFamIndices = _findQueueFamilies(_physicalDevice);
+		QueueFamilyIndices qFamIndices = _findQueueFamilies(_vkContext.physicalDevice);
 
 		VkCommandPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		poolInfo.queueFamilyIndex = qFamIndices.graphicsFamily.value;
 		poolInfo.flags = 0;
-		if (vkCreateCommandPool(_logicalDevice, &poolInfo, nullptr, &_commandPool) != VK_SUCCESS) {
+		if (vkCreateCommandPool(_vkContext.logicalDevice, &poolInfo, nullptr, &(_vkContext.commandPool)) != VK_SUCCESS) {
 			RARE_FATAL("Couldn't create Command Pool");
 		}
 		RARE_LOG("Command pool for graphics	queue family created");
@@ -1682,11 +1543,11 @@ namespace Rare {
 
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.commandPool = _commandPool;
+		allocInfo.commandPool = _vkContext.commandPool;
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		allocInfo.commandBufferCount = (uint32_t)_commandBuffers.size();
 
-		if (vkAllocateCommandBuffers(_logicalDevice, &allocInfo, _commandBuffers.data()) != VK_SUCCESS) {
+		if (vkAllocateCommandBuffers(_vkContext.logicalDevice, &allocInfo, _commandBuffers.data()) != VK_SUCCESS) {
 			RARE_FATAL("Could not allocate command buffers");
 		}
 		for (size_t i = 0; i < _commandBuffers.size(); i++) {
@@ -1745,11 +1606,11 @@ namespace Rare {
 		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
 		for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {
-			if (vkCreateSemaphore(_logicalDevice, &semaphoreInfo, nullptr, &_s_imageAvailable[i]) != VK_SUCCESS)
+			if (vkCreateSemaphore(_vkContext.logicalDevice, &semaphoreInfo, nullptr, &_s_imageAvailable[i]) != VK_SUCCESS)
 				RARE_FATAL("Failed to create imageAvailable semaphore");
-			if (vkCreateSemaphore(_logicalDevice, &semaphoreInfo, nullptr, &_s_renderFinished[i]) != VK_SUCCESS)
+			if (vkCreateSemaphore(_vkContext.logicalDevice, &semaphoreInfo, nullptr, &_s_renderFinished[i]) != VK_SUCCESS)
 				RARE_FATAL("Failed to create renderFinished semaphore");
-			if (vkCreateFence(_logicalDevice, &fenceInfo, nullptr, &_f_inFlight[i]) != VK_SUCCESS)
+			if (vkCreateFence(_vkContext.logicalDevice, &fenceInfo, nullptr, &_f_inFlight[i]) != VK_SUCCESS)
 				RARE_FATAL("Failed to create inFlight fence");
 
 		}
@@ -1770,7 +1631,7 @@ namespace Rare {
 		VkDebugUtilsMessengerCreateInfoEXT createInfo;
 		_populateDebugMessengerCreateInfo(createInfo);
 
-		if (CreateDebugUtilsMessengerEXT(_vkInstance, &createInfo, nullptr, &_debugMessenger) != VK_SUCCESS) {
+		if (CreateDebugUtilsMessengerEXT(_vkContext.vkInstance, &createInfo, nullptr, &_debugMessenger) != VK_SUCCESS) {
 			RARE_FATAL("failed to set up debug messenger");
 		}
 		RARE_DEBUG("Created debug messenger");

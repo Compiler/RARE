@@ -1,18 +1,9 @@
 #pragma once
-#include <vulkan/vulkan.h>
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#include "RareCommon.h"
+#include "RareStructures.h"
+#include "Rendering/Data/BufferFactory.h"
+#include "Rendering/Commands/CmdBufferFactory.h"
 #include <Tools/Logging/Logger.h>
-#include <map>
-#include <set>
-#include <cstdint>
-#include <algorithm>
-#include <fstream>
-#include <string>
 #include "Tools/GLFWCallbacks.h"
 #include <Rendering/FileTypes/ShaderCompilation.h>
 #include <Tools/FileLoaders/FileLoaderFactory.h>
@@ -21,56 +12,7 @@
 
 #define FPS_COUNTER_LOGGED 1
 namespace Rare {
-	template<typename T> struct Optional {
-		T value;
-		bool has_value;
-	};
-	struct SwapChainSupportDetails {
-		VkSurfaceCapabilitiesKHR capabilities;
-		std::vector<VkSurfaceFormatKHR> formats;
-		std::vector<VkPresentModeKHR> presentModes;
-	};
-
-	struct VertexData {
-		glm::vec3 position;
-		glm::vec3 color;
-		glm::vec2 texCoord;
-
-		static VkVertexInputBindingDescription getBindingDescription() {
-			VkVertexInputBindingDescription bindingDescription{};
-			bindingDescription.binding = 0;
-			bindingDescription.stride = sizeof(VertexData);
-			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-			return bindingDescription;
-		}
-
-		static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
-			std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
-			attributeDescriptions[0].binding = 0;
-			attributeDescriptions[0].location = 0;
-			attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-			attributeDescriptions[0].offset = offsetof(VertexData, position);
-
-			attributeDescriptions[1].binding = 0;
-			attributeDescriptions[1].location = 1;
-			attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-			attributeDescriptions[1].offset = offsetof(VertexData, color);
-
-			attributeDescriptions[2].binding = 0;
-			attributeDescriptions[2].location = 2;
-			attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-			attributeDescriptions[2].offset = offsetof(VertexData, texCoord);
-
-			return attributeDescriptions;
-		}
-	};
-
-	struct  UniformBufferObject {
-		alignas(16) float time;
-		alignas(16)glm::mat4 model;
-		alignas(16)glm::mat4 view;
-		alignas(16)glm::mat4 proj;
-	};
+	
 	class RareCore {
 
 	private:
@@ -111,12 +53,9 @@ namespace Rare {
 		const std::string _TEXTURE_PATH = RARE_INTERNAL_TEXTURE("viking_room.png");
 
 		//vk setup core
-		VkInstance _vkInstance;
-		VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
-		VkDevice _logicalDevice;
-		VkDebugUtilsMessengerEXT _debugMessenger;
-		VkQueue _graphicsQueue;
+		VulkanContext _vkContext;
 		VkQueue _presentationQueue;
+		VkDebugUtilsMessengerEXT _debugMessenger;
 		std::vector<const char*> requiredDeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME }; //these are the absolute bare minimum required extensions to be considered suitable
 
 		//wsi surface integration
@@ -139,7 +78,6 @@ namespace Rare {
 		std::vector<VkFramebuffer> _swapChainFramebuffers;
 
 		//command buffers
-		VkCommandPool _commandPool;
 		std::vector<VkCommandBuffer> _commandBuffers;
 
 		//Semaphores (denoted with s_)
@@ -194,8 +132,6 @@ namespace Rare {
 		void _setupDebugMessenger();
 		void _recreateSwapChain();
 		void _cleanupSwapChain();
-		void _createVertexBuffer();
-		void _createIndexBuffer();
 		void _createDescriptorSetLayout();
 		void _createUniformBuffers();
 		void _createDescriptorPool();
@@ -212,8 +148,7 @@ namespace Rare {
 		void _copyBufferToImage(VkBuffer buff, VkImage img, uint32_t width, uint32_t height);
 		void _transitionImageLayout(VkImage img, VkFormat fmt, VkImageLayout olay, VkImageLayout nlay, uint32_t mipLevels);
 		void _createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, uint32_t mipLevels, VkSampleCountFlagBits numSamples = VK_SAMPLE_COUNT_1_BIT);
-		void _createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-		void _copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
+		
 
 		VkFormat _findDepthFormat() {
 			return _findSupportedBitFormats(
@@ -229,7 +164,7 @@ namespace Rare {
 
 		VkSampleCountFlagBits getMaxUsableSampleCount() {
 			VkPhysicalDeviceProperties physicalDeviceProperties;
-			vkGetPhysicalDeviceProperties(_physicalDevice, &physicalDeviceProperties);
+			vkGetPhysicalDeviceProperties(_vkContext.physicalDevice, &physicalDeviceProperties);
 
 			VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
 			if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
@@ -244,9 +179,6 @@ namespace Rare {
 
 		void _updateUniformBuffer(uint32_t imageIndex);
 		void _populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-		VkCommandBuffer _beginOneoffCommands();
-		void _endOneoffCommands(VkCommandBuffer cb);
-		uint32_t _findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 		bool _isDeviceSuitable(VkPhysicalDevice device);//TODO: move to seperate factory class or something
 		bool _checkValidationLayerSupport();

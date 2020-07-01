@@ -101,6 +101,8 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\Rendering\Commands\CmdBufferFactory.cpp" />
+    <ClCompile Include="src\Rendering\Data\BufferFactory.cpp" />
     <ClCompile Include="src\Tools\FileLoaders\FileLoaderFactory.cpp" />
     <ClCompile Include="src\Tools\GLFWCallbacks.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -112,6 +114,10 @@
   <ItemGroup>
     <ClInclude Include="src\ECS\Registry.h" />
     <ClInclude Include="src\PhysicalDevices\DeviceOptions.h" />
+    <ClInclude Include="src\RareCommon.h" />
+    <ClInclude Include="src\RareStructures.h" />
+    <ClInclude Include="src\Rendering\Commands\CmdBufferFactory.h" />
+    <ClInclude Include="src\Rendering\Data\BufferFactory.h" />
     <ClInclude Include="src\Tools\FileLoaders\FileLoaderFactory.h" />
     <ClInclude Include="src\Tools\GLFWCallbacks.h" />
     <ClInclude Include="src\PhysicalDevices\GPUDevice.h" />

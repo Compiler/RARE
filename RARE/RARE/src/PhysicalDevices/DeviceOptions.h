@@ -1,5 +1,5 @@
 #pragma once
-#include <vulkan/vulkan.h>
+#include "RareCommon.h"
 namespace Rare{
 	namespace OPTIONS
 	{
